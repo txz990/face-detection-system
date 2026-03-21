@@ -448,19 +448,23 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
  * 绘制五眼比例区域
  */
 function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
+  const faceLeft = landmarks[162]
   const leftEyeLeft = landmarks[33]
   const leftEyeRight = landmarks[133]
   const rightEyeLeft = landmarks[362]
   const rightEyeRight = landmarks[263]
+  const faceRight = landmarks[389]
   const foreheadY = landmarks[10].y * scale.y
   const chinY = landmarks[152].y * scale.y
 
-  if (!leftEyeLeft || !leftEyeRight || !rightEyeLeft || !rightEyeRight) return
+  if (!faceLeft || !leftEyeLeft || !leftEyeRight || !rightEyeLeft || !rightEyeRight || !faceRight) return
 
+  const x0 = faceLeft.x * scale.x
   const x1 = leftEyeLeft.x * scale.x
   const x2 = leftEyeRight.x * scale.x
   const x3 = rightEyeLeft.x * scale.x
   const x4 = rightEyeRight.x * scale.x
+  const x5 = faceRight.x * scale.x
   const eyeY = leftEyeLeft.y * scale.y
 
   // 根据人脸比例调整线条
@@ -473,10 +477,10 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.globalAlpha = 0.6
 
   const lines = [
-    { x: x1, color: '#FF69B4' },
-    { x: x2, color: '#8E7DBE' },
-    { x: x3, color: '#8E7DBE' },
-    { x: x4, color: '#FF1493' }
+    { x: x1, color: '#FF69B4' },  // 左眼外侧
+    { x: x2, color: '#8E7DBE' },  // 左眼内侧
+    { x: x3, color: '#8E7DBE' },  // 右眼内侧
+    { x: x4, color: '#FF1493' }   // 右眼外侧
   ]
 
   lines.forEach(line => {
@@ -492,6 +496,12 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
 
   // 绘制五个眼睛宽度区域的标签
   const regions = [
+    {
+      name: '左空白',
+      value: measurements.leftBlank,
+      color: '#9CA3AF',
+      x: (x0 + x1) / 2
+    },
     {
       name: '左眼',
       value: measurements.leftEyeWidth,
@@ -509,6 +519,12 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
       value: measurements.rightEyeWidth,
       color: '#FF1493',
       x: (x3 + x4) / 2
+    },
+    {
+      name: '右空白',
+      value: measurements.rightBlank,
+      color: '#9CA3AF',
+      x: (x4 + x5) / 2
     }
   ]
 

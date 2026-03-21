@@ -360,6 +360,8 @@ const getIcon = (key) => {
     leftEyeWidth: '👁️',
     rightEyeWidth: '👁️',
     eyeDistance: '📏',
+    leftBlank: '⬜',
+    rightBlank: '⬜',
     leftEyeHeight: '↕️',
     rightEyeHeight: '↕️',
     noseWidth: '👃',
