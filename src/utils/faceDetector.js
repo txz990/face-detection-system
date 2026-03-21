@@ -15,9 +15,8 @@ function autoDetectKeypoints(landmarks, imgWidth, imgHeight) {
 
   // 可能的眼睛宽度索引组合
   const eyeCombinations = [
-    { left: [33, 130], right: [263, 362], name: '当前' },
-    { left: [33, 133], right: [362, 263], name: '修正1' },
-    { left: [33, 130], right: [362, 263], name: '修正2' },
+    { left: [33, 133], right: [362, 263], name: '修正版' },
+    { left: [33, 130], right: [263, 362], name: '旧版' },
   ]
 
   console.log('🔧 自动检测关键点索引:')
@@ -448,9 +447,9 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
  */
 function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
   const leftEyeLeft = landmarks[33]
-  const leftEyeRight = landmarks[130]
-  const rightEyeLeft = landmarks[263]
-  const rightEyeRight = landmarks[362]
+  const leftEyeRight = landmarks[133]
+  const rightEyeLeft = landmarks[362]
+  const rightEyeRight = landmarks[263]
   const foreheadY = landmarks[10].y * scale.y
   const chinY = landmarks[152].y * scale.y
 
@@ -642,13 +641,13 @@ function calculateFaceMeasurements(landmarks, scale) {
     leftTemple: 21,          // 左太阳穴
     rightTemple: 251,        // 右太阳穴
 
-    // 眼睛关键点（修正）
+    // 眼睛关键点（根据 MediaPipe 官方定义修正）
     leftEyeLeft: 33,         // 左眼外侧（离鼻子远）
-    leftEyeRight: 130,       // 左眼内侧（靠近鼻子）
+    leftEyeRight: 133,       // 左眼内侧（靠近鼻子）- 修正：133 不是 130
     leftEyeTop: 159,         // 左眼上方
     leftEyeBottom: 145,      // 左眼下方
-    rightEyeLeft: 263,       // 右眼内侧（靠近鼻子）
-    rightEyeRight: 362,      // 右眼外侧（离鼻子远）
+    rightEyeLeft: 362,       // 右眼外侧（离鼻子远）
+    rightEyeRight: 263,      // 右眼内侧（靠近鼻子）
     rightEyeTop: 386,        // 右眼上方
     rightEyeBottom: 374,     // 右眼下方
 
