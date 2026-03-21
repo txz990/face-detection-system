@@ -7,7 +7,6 @@
           <div class="logo-icon">🧬</div>
           <div class="logo-text">
             <h1>人脸五官检测系统</h1>
-            <p>AI-Powered Facial Landmark Analysis</p>
           </div>
         </div>
         <div class="header-actions">
@@ -37,7 +36,13 @@
           >
             <label for="imageInput" class="upload-label">
               <div v-if="!imageUrl" class="upload-placeholder">
-                <div class="upload-icon">📤</div>
+                <svg class="upload-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="15" y="30" width="70" height="50" rx="5" fill="none" stroke="#6366f1" stroke-width="2"/>
+                  <circle cx="70" cy="45" r="8" fill="none" stroke="#6366f1" stroke-width="2"/>
+                  <polyline points="15,70 35,55 65,80 85,60" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="45,25 45,50 35,40" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="55,25 55,50 65,40" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
                 <span class="upload-text">点击或拖拽图片到此处</span>
                 <span class="upload-hint">建议使用正面清晰人像照片</span>
               </div>
@@ -88,9 +93,22 @@
         <!-- Detection Result Image -->
         <div v-if="resultImage" class="panel-card result-card">
           <div class="card-header">
-            <h3>🔍 检测结果</h3>
-            <p>自动标注五官关键点</p>
+            <h3>检测结果</h3>
+            <p>标注测量数据</p>
           </div>
+
+          <!-- Measurement Mode Selector -->
+          <div class="mode-selector">
+            <button
+              v-for="mode in measurementModes"
+              :key="mode.value"
+              @click="selectMeasurementMode(mode.value)"
+              :class="['mode-btn', { active: currentMeasurementMode === mode.value }]"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
+
           <div class="result-container">
             <img :src="resultImage" alt="检测结果" class="result-img" />
           </div>
@@ -99,15 +117,84 @@
         <!-- Data Analysis -->
         <div v-if="faceData" class="panel-card data-card">
           <div class="card-header">
-            <h3>📊 五官数据分析</h3>
-            <p>基于人脸比例的详细测量数据</p>
+            <h3>数据分析</h3>
+            <p>详细的面部特征测量数据</p>
           </div>
-          <div class="data-grid">
-            <div v-for="(value, key) in faceData" :key="key" class="data-item">
-              <div class="data-icon">{{ getIcon(key) }}</div>
-              <div class="data-info">
-                <span class="label">{{ formatLabel(key) }}</span>
-                <span class="value">{{ formatValue(value) }}</span>
+
+          <!-- Section 1: 脸部基本尺寸 -->
+          <div class="data-section">
+            <div class="section-title">脸部基本尺寸</div>
+            <div class="data-grid">
+              <div v-for="key in ['faceHeight', 'faceWidth']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: 三庭比例 -->
+          <div class="data-section">
+            <div class="section-title">三庭比例（美学黄金比例）</div>
+            <div class="data-grid">
+              <div v-for="key in ['thirdUpper', 'thirdMiddle', 'thirdLower']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: 眼睛数据 -->
+          <div class="data-section">
+            <div class="section-title">眼睛数据</div>
+            <div class="data-grid">
+              <div v-for="key in ['leftEyeWidth', 'rightEyeWidth', 'eyeDistance', 'leftEyeHeight', 'rightEyeHeight']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: 鼻子数据 -->
+          <div class="data-section">
+            <div class="section-title">鼻子数据</div>
+            <div class="data-grid">
+              <div v-for="key in ['noseWidth', 'noseHeight']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: 嘴巴数据 -->
+          <div class="data-section">
+            <div class="section-title">嘴巴数据</div>
+            <div class="data-grid">
+              <div v-for="key in ['mouthWidth', 'mouthHeight']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 6: 关键点坐标 -->
+          <div class="data-section">
+            <div class="section-title">关键点坐标</div>
+            <div class="data-grid">
+              <div v-for="key in ['leftEyeCoord', 'rightEyeCoord', 'noseCoord', 'mouthCoord']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -130,22 +217,32 @@
     </main>
     
     <footer class="app-footer">
-      <p>&copy; 2024 人脸五官检测系统 | 基于 TensorFlow.js & Face-api.js</p>
+      <p>&copy; 2026 人脸五官检测系统</p>
     </footer>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { initializeFaceDetector, detectFaceInImage } from './utils/faceDetector'
+import { initializeFaceDetector, detectFaceInImage, printAllMeasurements } from './utils/faceDetector'
 
 const imageFile = ref(null)
 const imageUrl = ref(null)
 const resultImage = ref(null)
+const resultImageData = ref(null)  // 存储原始检测结果
 const faceData = ref(null)
 const isLoading = ref(false)
 const modelLoading = ref(true)
 const modelError = ref(null)
+
+// 测量模式相关
+const measurementModes = [
+  { value: 'all', label: '全部' },
+  { value: 'third', label: '三庭比例' },
+  { value: 'five-eyes', label: '五眼比例' },
+  { value: 'keypoints', label: '关键点' }
+]
+const currentMeasurementMode = ref('all')
 
 // Initialize model
 initializeFaceDetector()
@@ -200,11 +297,32 @@ const detectFace = async () => {
 
   isLoading.value = true
   try {
-    const result = await detectFaceInImage(imageUrl.value)
+    const result = await detectFaceInImage(imageUrl.value, currentMeasurementMode.value)
+    console.log('检测结果:', result)
+    console.log('人脸数据:', result.landmarks)
+    printAllMeasurements(result.landmarks)  // 打印所有测量数据
+    resultImageData.value = result  // 保存原始结果
     resultImage.value = result.canvas
     faceData.value = result.landmarks
+    currentMeasurementMode.value = 'all'  // 重置为全部模式
   } catch (error) {
     alert('检测失败: ' + error.message)
+    console.error('检测错误:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const selectMeasurementMode = async (mode) => {
+  if (!resultImageData.value) return
+
+  currentMeasurementMode.value = mode
+  isLoading.value = true
+  try {
+    const result = await detectFaceInImage(imageUrl.value, mode)
+    resultImage.value = result.canvas
+  } catch (error) {
+    console.error('模式切换失败:', error)
   } finally {
     isLoading.value = false
   }
@@ -260,10 +378,10 @@ const formatLabel = (key) => {
 
 const formatValue = (value) => {
   if (typeof value === 'number') {
-    return value.toFixed(1) + ' px'
+    return value.toFixed(2) + ' px'
   }
   if (typeof value === 'object' && value !== null) {
-    return `${Math.round(value.x)}, ${Math.round(value.y)}`
+    return `(${Math.round(value.x)}, ${Math.round(value.y)}) px`
   }
   return value
 }
@@ -436,7 +554,9 @@ const formatValue = (value) => {
 }
 
 .upload-icon {
-  font-size: 2.5rem;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
 }
 
 .upload-text {
@@ -537,6 +657,39 @@ const formatValue = (value) => {
 }
 
 /* Result Card */
+/* Mode Selector */
+.mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 0 1.5rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mode-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #f5f3ff;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border-color: #6366f1;
+}
+
 .result-container {
   padding: 1.5rem;
   background: #f8fafc;
@@ -551,12 +704,30 @@ const formatValue = (value) => {
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 }
 
+/* Data Sections */
+.data-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.data-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
 /* Data Grid */
 .data-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
-  padding: 1.5rem;
 }
 
 .data-item {
@@ -565,8 +736,8 @@ const formatValue = (value) => {
   border-radius: 0.75rem;
   padding: 1rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
   transition: all 0.2s;
 }
 
@@ -578,20 +749,13 @@ const formatValue = (value) => {
 }
 
 .data-icon {
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
-  background: #ffffff;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  display: none;
 }
 
 .data-info {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
 .data-info .label {

@@ -703,6 +703,57 @@ function calculateFaceMeasurements(landmarks, scale) {
 }
 
 /**
+ * 打印所有测量数据（调试用）
+ */
+export function printAllMeasurements(data) {
+  console.log('====== 完整的人脸测量数据 ======')
+  console.log('📊 总共返回数据项:', Object.keys(data).length, '条')
+  console.log('')
+
+  console.log('🔴 脸部基本尺寸:')
+  console.log('  - faceHeight (脸部高度):', data.faceHeight?.toFixed(2), 'px')
+  console.log('  - faceWidth (脸部宽度):', data.faceWidth?.toFixed(2), 'px')
+  console.log('')
+
+  console.log('🟡 三庭比例:')
+  console.log('  - thirdUpper (上庭):', data.thirdUpper?.toFixed(2), 'px')
+  console.log('  - thirdMiddle (中庭):', data.thirdMiddle?.toFixed(2), 'px')
+  console.log('  - thirdLower (下庭):', data.thirdLower?.toFixed(2), 'px')
+  console.log('')
+
+  console.log('🟢 五眼比例:')
+  console.log('  - leftEyeWidth (左眼宽):', data.leftEyeWidth?.toFixed(2), 'px')
+  console.log('  - rightEyeWidth (右眼宽):', data.rightEyeWidth?.toFixed(2), 'px')
+  console.log('  - eyeDistance (两眼距):', data.eyeDistance?.toFixed(2), 'px')
+  console.log('  - 左眼/右眼比例:', (data.leftEyeWidth / data.rightEyeWidth)?.toFixed(2))
+  console.log('')
+
+  console.log('👁️ 眼睛数据:')
+  console.log('  - leftEyeHeight (左眼高):', data.leftEyeHeight?.toFixed(2), 'px')
+  console.log('  - rightEyeHeight (右眼高):', data.rightEyeHeight?.toFixed(2), 'px')
+  console.log('')
+
+  console.log('👃 鼻子数据:')
+  console.log('  - noseWidth (鼻宽):', data.noseWidth?.toFixed(2), 'px')
+  console.log('  - noseHeight (鼻高):', data.noseHeight?.toFixed(2), 'px')
+  console.log('')
+
+  console.log('👄 嘴巴数据:')
+  console.log('  - mouthWidth (嘴宽):', data.mouthWidth?.toFixed(2), 'px')
+  console.log('  - mouthHeight (嘴高):', data.mouthHeight?.toFixed(2), 'px')
+  console.log('')
+
+  console.log('📍 关键点坐标:')
+  console.log('  - leftEyeCoord (左眼):', data.leftEyeCoord)
+  console.log('  - rightEyeCoord (右眼):', data.rightEyeCoord)
+  console.log('  - noseCoord (鼻尖):', data.noseCoord)
+  console.log('  - mouthCoord (嘴巴):', data.mouthCoord)
+  console.log('')
+
+  console.log('📋 完整数据对象:', data)
+  console.log('=============================')
+
+/**
  * 绘制连接的点
  */
 function drawConnectedPoints(ctx, landmarks, indices, scale) {
