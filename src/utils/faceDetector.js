@@ -184,6 +184,11 @@ function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
     drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale)
   }
 
+  // 在"全部"模式下显示脸高和脸宽
+  if (measurementMode === 'all') {
+    drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale)
+  }
+
   // 只在"全部"和"关键点"模式下显示关键点标注
   if (measurementMode === 'all' || measurementMode === 'keypoints') {
     // 标记关键点并添加数据标签
@@ -323,6 +328,123 @@ function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
   }
 
   return measurements
+}
+
+/**
+ * 绘制脸部尺寸（脸高和脸宽）
+ */
+function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
+  const forehead = landmarks[10]      // 额头中心
+  const chin = landmarks[152]         // 下巴
+  const faceLeft = landmarks[162]     // 脸左侧
+  const faceRight = landmarks[389]    // 脸右侧
+
+  if (!forehead || !chin || !faceLeft || !faceRight) return
+
+  const foreheadY = forehead.y * scale.y
+  const chinY = chin.y * scale.y
+  const leftX = faceLeft.x * scale.x
+  const rightX = faceRight.x * scale.x
+
+  // 线条样式
+  const lineWidth = 2 * faceScale
+  const arrowSize = 15 * faceScale
+  const fontSize = Math.round(12 * faceScale)
+  const valueFontSize = Math.round(11 * faceScale)
+
+  // 脸高标注（左侧竖线）
+  ctx.strokeStyle = '#8B5CF6'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  const heightX = leftX - 30 * faceScale
+  ctx.beginPath()
+  ctx.moveTo(heightX, foreheadY)
+  ctx.lineTo(heightX, chinY)
+  ctx.stroke()
+
+  // 脸高箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, heightX, foreheadY - arrowSize/2, heightX, foreheadY + arrowSize/2, '#8B5CF6', arrowSize)
+  drawArrow(ctx, heightX, chinY + arrowSize/2, heightX, chinY - arrowSize/2, '#8B5CF6', arrowSize)
+
+  // 脸高标签
+  const heightLabelX = heightX - 25 * faceScale
+  const heightLabelY = (foreheadY + chinY) / 2
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#8B5CF6'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, heightLabelX - 35 * faceScale, heightLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#8B5CF6'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('脸高', heightLabelX, heightLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.faceHeight.toFixed(1)} px`, heightLabelX, heightLabelY + 10 * faceScale)
+
+  // 脸宽标注（上方横线）
+  ctx.strokeStyle = '#EC4899'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  const widthY = foreheadY - 40 * faceScale
+  ctx.beginPath()
+  ctx.moveTo(leftX, widthY)
+  ctx.lineTo(rightX, widthY)
+  ctx.stroke()
+
+  // 脸宽箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftX - arrowSize/2, widthY, leftX + arrowSize/2, widthY, '#EC4899', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, widthY, rightX - arrowSize/2, widthY, '#EC4899', arrowSize)
+
+  // 脸宽标签
+  const widthLabelX = (leftX + rightX) / 2
+  const widthLabelY = widthY - 30 * faceScale
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#EC4899'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, widthLabelX - 35 * faceScale, widthLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#EC4899'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('脸宽', widthLabelX, widthLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.faceWidth.toFixed(1)} px`, widthLabelX, widthLabelY + 10 * faceScale)
+}
+
+/**
+ * 绘制箭头
+ */
+function drawArrow(ctx, fromX, fromY, toX, toY, color, size) {
+  const headlen = 8
+  const angle = Math.atan2(toY - fromY, toX - fromX)
+
+  ctx.strokeStyle = color
+  ctx.fillStyle = color
+  ctx.lineWidth = 1.5
+
+  // 箭头顶点
+  ctx.beginPath()
+  ctx.moveTo(toX, toY)
+  ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6))
+  ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6))
+  ctx.closePath()
+  ctx.fill()
 }
 
 /**
