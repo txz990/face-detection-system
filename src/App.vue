@@ -1,7 +1,37 @@
 <template>
   <div class="app-wrapper">
-    <!-- Header -->
-    <header class="header">
+    <!-- 登录界面 -->
+    <div v-if="!isAuthenticated" class="login-container">
+      <div class="login-box">
+        <div class="login-icon">🔐</div>
+        <h2>人脸五官检测系统</h2>
+        <p class="login-subtitle">请输入密码以继续</p>
+
+        <div class="login-form">
+          <input
+            v-model="password"
+            type="password"
+            placeholder="输入密码"
+            class="password-input"
+            @keyup.enter="handleLogin"
+            autofocus
+          />
+
+          <button @click="handleLogin" class="login-btn">
+            登 入
+          </button>
+
+          <p v-if="loginError" class="error-message">
+            ❌ {{ loginError }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主应用界面 -->
+    <div v-else class="main-content-wrapper">
+      <!-- Header -->
+      <header class="header">
       <div class="header-content">
         <div class="logo-area">
           <div class="logo-icon">🧬</div>
@@ -10,8 +40,14 @@
           </div>
         </div>
         <div class="header-actions">
+          <button v-if="resultImage" @click="saveImage" class="save-btn" title="下载标注图片">
+            💾 保存图片
+          </button>
           <button v-if="imageUrl" @click="clearAll" class="clear-btn">
             🧹 清除所有
+          </button>
+          <button @click="handleLogout" class="logout-btn" title="退出登录">
+            🚪 退出
           </button>
         </div>
       </div>
@@ -232,12 +268,43 @@
     <footer class="app-footer">
       <p>&copy; 2026 人脸五官检测系统</p>
     </footer>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { initializeFaceDetector, detectFaceInImage, printAllMeasurements } from './utils/faceDetector'
+
+// 认证相关
+const isAuthenticated = ref(false)
+const password = ref('')
+const loginError = ref('')
+const CORRECT_PASSWORD = 'admin'  // 正确密码
+
+const handleLogin = () => {
+  if (password.value === CORRECT_PASSWORD) {
+    isAuthenticated.value = true
+    localStorage.setItem('faceDetectorAuth', 'authenticated')
+    loginError.value = ''
+    password.value = ''
+  } else {
+    loginError.value = '密码错误，请重试'
+    password.value = ''
+  }
+}
+
+const handleLogout = () => {
+  isAuthenticated.value = false
+  localStorage.removeItem('faceDetectorAuth')
+}
+
+// 页面加载时检查认证状态
+onMounted(() => {
+  if (localStorage.getItem('faceDetectorAuth') === 'authenticated') {
+    isAuthenticated.value = true
+  }
+})
 
 const imageFile = ref(null)
 const imageUrl = ref(null)
@@ -298,6 +365,21 @@ const clearAll = () => {
   imageUrl.value = null
   resultImage.value = null
   faceData.value = null
+}
+
+const saveImage = () => {
+  if (!resultImage.value) {
+    alert('没有检测结果可保存')
+    return
+  }
+
+  const link = document.createElement('a')
+  link.href = resultImage.value
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+  link.download = `face-detection-${timestamp}.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 const detectFace = async () => {
@@ -430,6 +512,125 @@ const formatValue = (value) => {
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/* 登录界面样式 */
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.main-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.login-box {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.login-icon {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.login-box h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  color: #64748b;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.password-input {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.login-btn {
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  color: #ef4444;
+  margin: 0;
+  font-size: 0.9rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
 .app-wrapper {
   min-height: 100vh;
   display: flex;
@@ -500,6 +701,40 @@ const formatValue = (value) => {
 .clear-btn:hover {
   background: #e2e8f0;
   color: #1e293b;
+}
+
+.save-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 /* Main Content Layout */
