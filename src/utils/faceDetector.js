@@ -65,8 +65,24 @@ export async function detectFaceInImage(imageUrl, measurementMode = 'all') {
         console.log('====== 原始 API 返回数据 ======')
         console.log('📌 总共检测到', landmarks.length, '个关键点')
         console.log('🔍 完整的 468 个关键点坐标:', landmarks)
-        console.log('=====================================')
+        console.log('')
 
+        // 打印关键点的原始坐标（用于调试）
+        console.log('🔍 关键点调试信息:')
+        console.log('  landmark[33] (leftEyeOuter):', landmarks[33])
+        console.log('  landmark[130] (检查):', landmarks[130])
+        console.log('  landmark[133] (leftEyeInner?):', landmarks[133])
+        console.log('  landmark[263] (rightEyeInner?):', landmarks[263])
+        console.log('  landmark[362] (rightEyeOuter):', landmarks[362])
+        console.log('  landmark[1] (noseTip):', landmarks[1])
+        console.log('  landmark[10] (forehead):', landmarks[10])
+        console.log('  landmark[152] (chin):', landmarks[152])
+        console.log('  landmark[61] (mouthLeft):', landmarks[61])
+        console.log('  landmark[291] (mouthRight):', landmarks[291])
+        console.log('  landmark[13] (mouthTop):', landmarks[13])
+        console.log('  landmark[14] (mouthBottom):', landmarks[14])
+        console.log('=====================================')
+        console.log('')
         resolve({
           canvas: canvas.toDataURL('image/png'),
           landmarks: data,
