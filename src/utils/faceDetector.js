@@ -752,6 +752,7 @@ export function printAllMeasurements(data) {
 
   console.log('📋 完整数据对象:', data)
   console.log('=============================')
+}
 
 /**
  * 绘制连接的点
