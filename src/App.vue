@@ -160,6 +160,19 @@
             </div>
           </div>
 
+          <!-- Section 3.5: 五眼比例两侧空白 -->
+          <div class="data-section">
+            <div class="section-title">五眼比例（完整）</div>
+            <div class="data-grid">
+              <div v-for="key in ['leftBlank', 'leftEyeWidth', 'eyeDistance', 'rightEyeWidth', 'rightBlank']" :key="key" class="data-item">
+                <div class="data-info">
+                  <span class="label">{{ formatLabel(key) }}</span>
+                  <span class="value">{{ formatValue(faceData[key]) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Section 4: 鼻子数据 -->
           <div class="data-section">
             <div class="section-title">鼻子数据</div>
@@ -371,6 +384,8 @@ const formatLabel = (key) => {
     leftEyeWidth: '左眼宽度',
     rightEyeWidth: '右眼宽度',
     eyeDistance: '两眼距离',
+    leftBlank: '左侧空白',
+    rightBlank: '右侧空白',
     leftEyeHeight: '左眼高度',
     rightEyeHeight: '右眼高度',
     noseWidth: '鼻宽',

@@ -702,9 +702,16 @@ function calculateFaceMeasurements(landmarks, scale) {
   const leftEyeWidth = getDistance(points.leftEyeLeft, points.leftEyeRight)
   const rightEyeWidth = getDistance(points.rightEyeLeft, points.rightEyeRight)
   const eyeDistance = getDistance(points.leftEyeRight, points.rightEyeLeft)
+
+  // 补充：五眼的两侧空白宽度
+  const leftBlank = getDistance(points.faceLeft, points.leftEyeLeft)
+  const rightBlank = getDistance(points.rightEyeRight, points.faceRight)
+
   data.leftEyeWidth = leftEyeWidth
   data.rightEyeWidth = rightEyeWidth
   data.eyeDistance = eyeDistance
+  data.leftBlank = leftBlank
+  data.rightBlank = rightBlank
 
   // 4. 眼睛高度
   const leftEyeHeight = getDistance(points.leftEyeTop, points.leftEyeBottom)
@@ -765,10 +772,13 @@ export function printAllMeasurements(data) {
   console.log('')
 
   console.log('🟢 五眼比例:')
+  console.log('  - leftBlank (左侧空白):', data.leftBlank?.toFixed(2), 'px')
   console.log('  - leftEyeWidth (左眼宽):', data.leftEyeWidth?.toFixed(2), 'px')
-  console.log('  - rightEyeWidth (右眼宽):', data.rightEyeWidth?.toFixed(2), 'px')
   console.log('  - eyeDistance (两眼距):', data.eyeDistance?.toFixed(2), 'px')
+  console.log('  - rightEyeWidth (右眼宽):', data.rightEyeWidth?.toFixed(2), 'px')
+  console.log('  - rightBlank (右侧空白):', data.rightBlank?.toFixed(2), 'px')
   console.log('  - 左眼/右眼比例:', (data.leftEyeWidth / data.rightEyeWidth)?.toFixed(2))
+  console.log('  - 五眼总宽:', (data.leftBlank + data.leftEyeWidth + data.eyeDistance + data.rightEyeWidth + data.rightBlank)?.toFixed(2), 'px')
   console.log('')
 
   console.log('👁️ 眼睛数据:')
