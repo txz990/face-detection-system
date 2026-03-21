@@ -64,23 +64,45 @@ export async function detectFaceInImage(imageUrl, measurementMode = 'all') {
         // 打印所有原始 API 数据到控制台
         console.log('====== 原始 API 返回数据 ======')
         console.log('📌 总共检测到', landmarks.length, '个关键点')
-        console.log('🔍 完整的 468 个关键点坐标:', landmarks)
-        console.log('')
 
-        // 打印关键点的原始坐标（用于调试）
-        console.log('🔍 关键点调试信息:')
-        console.log('  landmark[33] (leftEyeOuter):', landmarks[33])
-        console.log('  landmark[130] (检查):', landmarks[130])
-        console.log('  landmark[133] (leftEyeInner?):', landmarks[133])
-        console.log('  landmark[263] (rightEyeInner?):', landmarks[263])
-        console.log('  landmark[362] (rightEyeOuter):', landmarks[362])
-        console.log('  landmark[1] (noseTip):', landmarks[1])
-        console.log('  landmark[10] (forehead):', landmarks[10])
-        console.log('  landmark[152] (chin):', landmarks[152])
-        console.log('  landmark[61] (mouthLeft):', landmarks[61])
-        console.log('  landmark[291] (mouthRight):', landmarks[291])
-        console.log('  landmark[13] (mouthTop):', landmarks[13])
-        console.log('  landmark[14] (mouthBottom):', landmarks[14])
+        // 检查关键点索引和坐标
+        console.log('🔍 关键眼睛点坐标:')
+        const eyeDebug = {
+          '33': landmarks[33],
+          '130': landmarks[130],
+          '133': landmarks[133],
+          '263': landmarks[263],
+          '362': landmarks[362],
+        }
+        console.log('眼睛点:', eyeDebug)
+
+        // 计算距离来验证哪个是对的眼睛宽度
+        const getDistance = (p1, p2) => {
+          if (!p1 || !p2) return 0
+          const dx = (p2.x - p1.x) * img.width
+          const dy = (p2.y - p1.y) * img.height
+          return Math.sqrt(dx * dx + dy * dy)
+        }
+
+        console.log('左眼宽度验证:')
+        console.log('  33-130:', getDistance(landmarks[33], landmarks[130])?.toFixed(2), 'px')
+        console.log('  33-133:', getDistance(landmarks[33], landmarks[133])?.toFixed(2), 'px')
+
+        console.log('右眼宽度验证:')
+        console.log('  263-362:', getDistance(landmarks[263], landmarks[362])?.toFixed(2), 'px')
+        console.log('  362-263:', getDistance(landmarks[362], landmarks[263])?.toFixed(2), 'px')
+
+        console.log('鼻子点坐标:')
+        console.log('  1(鼻尖):', landmarks[1])
+        console.log('  98(鼻左):', landmarks[98])
+        console.log('  327(鼻右):', landmarks[327])
+
+        console.log('嘴巴点坐标:')
+        console.log('  13(嘴上):', landmarks[13])
+        console.log('  14(嘴下):', landmarks[14])
+        console.log('  61(嘴左):', landmarks[61])
+        console.log('  291(嘴右):', landmarks[291])
+
         console.log('=====================================')
         console.log('')
         resolve({
