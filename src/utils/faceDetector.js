@@ -1,6 +1,40 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 
-let faceLandmarker = null
+/**
+ * 自动检测和修正关键点索引
+ */
+function autoDetectKeypoints(landmarks, imgWidth, imgHeight) {
+  const getDistance = (idx1, idx2) => {
+    const p1 = landmarks[idx1]
+    const p2 = landmarks[idx2]
+    if (!p1 || !p2) return 0
+    const dx = (p2.x - p1.x) * imgWidth
+    const dy = (p2.y - p1.y) * imgHeight
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  // 可能的眼睛宽度索引组合
+  const eyeCombinations = [
+    { left: [33, 130], right: [263, 362], name: '当前' },
+    { left: [33, 133], right: [362, 263], name: '修正1' },
+    { left: [33, 130], right: [362, 263], name: '修正2' },
+  ]
+
+  console.log('🔧 自动检测关键点索引:')
+  console.log('---')
+
+  eyeCombinations.forEach(combo => {
+    const leftWidth = getDistance(combo.left[0], combo.left[1])
+    const rightWidth = getDistance(combo.right[0], combo.right[1])
+    const ratio = (leftWidth / rightWidth).toFixed(2)
+    const isValid = leftWidth > 20 && leftWidth < 200 && rightWidth > 20 && rightWidth < 200
+
+    console.log(`${combo.name}: 左眼=${leftWidth.toFixed(2)}px, 右眼=${rightWidth.toFixed(2)}px, 比例=${ratio}`, isValid ? '✅' : '❌')
+  })
+
+  console.log('---')
+}
+
 
 /**
  * 初始化人脸识别模型
@@ -65,45 +99,8 @@ export async function detectFaceInImage(imageUrl, measurementMode = 'all') {
         console.log('====== 原始 API 返回数据 ======')
         console.log('📌 总共检测到', landmarks.length, '个关键点')
 
-        // 检查关键点索引和坐标
-        console.log('🔍 关键眼睛点坐标:')
-        const eyeDebug = {
-          '33': landmarks[33],
-          '130': landmarks[130],
-          '133': landmarks[133],
-          '263': landmarks[263],
-          '362': landmarks[362],
-        }
-        console.log('眼睛点:', eyeDebug)
-
-        // 计算距离来验证哪个是对的眼睛宽度
-        const getDistance = (p1, p2) => {
-          if (!p1 || !p2) return 0
-          const dx = (p2.x - p1.x) * img.width
-          const dy = (p2.y - p1.y) * img.height
-          return Math.sqrt(dx * dx + dy * dy)
-        }
-
-        console.log('左眼宽度验证:')
-        console.log('  33-130:', getDistance(landmarks[33], landmarks[130])?.toFixed(2), 'px')
-        console.log('  33-133:', getDistance(landmarks[33], landmarks[133])?.toFixed(2), 'px')
-
-        console.log('右眼宽度验证:')
-        console.log('  263-362:', getDistance(landmarks[263], landmarks[362])?.toFixed(2), 'px')
-        console.log('  362-263:', getDistance(landmarks[362], landmarks[263])?.toFixed(2), 'px')
-
-        console.log('鼻子点坐标:')
-        console.log('  1(鼻尖):', landmarks[1])
-        console.log('  98(鼻左):', landmarks[98])
-        console.log('  327(鼻右):', landmarks[327])
-
-        console.log('嘴巴点坐标:')
-        console.log('  13(嘴上):', landmarks[13])
-        console.log('  14(嘴下):', landmarks[14])
-        console.log('  61(嘴左):', landmarks[61])
-        console.log('  291(嘴右):', landmarks[291])
-
-        console.log('=====================================')
+        // 自动检测正确的关键点索引
+        autoDetectKeypoints(landmarks, img.width, img.height)
         console.log('')
         resolve({
           canvas: canvas.toDataURL('image/png'),
