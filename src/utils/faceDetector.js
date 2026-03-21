@@ -30,7 +30,7 @@ export async function initializeFaceDetector() {
 /**
  * 在图片上检测人脸并绘制标注
  */
-export async function detectFaceInImage(imageUrl) {
+export async function detectFaceInImage(imageUrl, measurementMode = 'all') {
   if (!faceLandmarker) {
     throw new Error('检测器未初始化，请先调用 initializeFaceDetector')
   }
@@ -59,7 +59,7 @@ export async function detectFaceInImage(imageUrl) {
 
         // 绘制标注
         const landmarks = results.faceLandmarks[0]
-        const data = drawLandmarks(ctx, landmarks, img.width, img.height)
+        const data = drawLandmarks(ctx, landmarks, img.width, img.height, measurementMode)
 
         resolve({
           canvas: canvas.toDataURL('image/png'),
@@ -77,74 +77,513 @@ export async function detectFaceInImage(imageUrl) {
 /**
  * 绘制面部特征点和线条
  */
-function drawLandmarks(ctx, landmarks, width, height) {
-  const data = {}
-
+function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
   // 缩放因子（MediaPipe 返回的是 0-1 之间的相对坐标）
   const scale = {
     x: width,
     y: height
   }
 
-  // 关键点索引定义
+  // 计算人脸尺度因子（用于动态调整线条、字体、标签大小）
+  const foreheadCenter = landmarks[10]
+  const chinTip = landmarks[152]
+  const faceHeight = Math.abs((chinTip.y - foreheadCenter.y) * height)
+
+  // 基准人脸高度为 300px，计算缩放因子
+  const baseHeight = 300
+  const faceScale = Math.max(0.5, Math.min(2, faceHeight / baseHeight))
+
+  // 关键点索引定义（根据 MediaPipe 官方 468 个关键点定义）
   const LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375]
-  const LEFT_EYE = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
-  const RIGHT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
+  const LEFT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
+  const RIGHT_EYE = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
   const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
 
-  // 绘制面部轮廓
-  ctx.strokeStyle = '#00CED1'
-  ctx.lineWidth = 2
-  ctx.setLineDash([5, 5]) // 虚线
-  drawConnectedPoints(ctx, landmarks, FACE_OVAL, scale)
+  // 只在"全部"和"关键点"模式下绘制面部轮廓和眼睛轮廓
+  if (measurementMode === 'all' || measurementMode === 'keypoints') {
+    // 绘制面部轮廓
+    ctx.strokeStyle = '#00CED1'
+    ctx.lineWidth = 2.5 * faceScale
+    ctx.setLineDash([5, 5])
+    ctx.globalAlpha = 0.8
+    drawConnectedPoints(ctx, landmarks, FACE_OVAL, scale)
 
-  // 绘制左眼
-  ctx.strokeStyle = '#FF69B4'
-  drawConnectedPoints(ctx, landmarks, LEFT_EYE, scale)
+    // 绘制左眼
+    ctx.strokeStyle = '#FF69B4'
+    ctx.globalAlpha = 0.8
+    drawConnectedPoints(ctx, landmarks, LEFT_EYE, scale)
 
-  // 绘制右眼
-  ctx.strokeStyle = '#FF1493'
-  drawConnectedPoints(ctx, landmarks, RIGHT_EYE, scale)
+    // 绘制右眼
+    ctx.strokeStyle = '#FF1493'
+    ctx.globalAlpha = 0.8
+    drawConnectedPoints(ctx, landmarks, RIGHT_EYE, scale)
 
-  // 绘制嘴巴
-  ctx.strokeStyle = '#FFD700'
-  drawConnectedPoints(ctx, landmarks, LIPS, scale)
+    // 绘制嘴巴
+    ctx.strokeStyle = '#FFD700'
+    ctx.globalAlpha = 0.8
+    drawConnectedPoints(ctx, landmarks, LIPS, scale)
 
-  ctx.setLineDash([]) // 恢复实线
-
-  // 标记关键点
-  const keyPoints = {
-    leftEye: 33,     // 左眼外角
-    rightEye: 362,   // 右眼外角
-    noseTip: 1,      // 鼻尖
-    mouth: 13,       // 嘴巴中心
+    ctx.setLineDash([]) // 恢复实线
+    ctx.globalAlpha = 1.0
   }
 
-  ctx.fillStyle = '#FF6347'
-  ctx.strokeStyle = '#FF6347'
-  ctx.lineWidth = 2
-
-  Object.entries(keyPoints).forEach(([key, index]) => {
-    const point = landmarks[index]
-    const x = point.x * scale.x
-    const y = point.y * scale.y
-
-    // 画圆点
-    ctx.beginPath()
-    ctx.arc(x, y, 5, 0, 2 * Math.PI)
-    ctx.fill()
-
-    // 标记名字
-    ctx.fillStyle = '#333'
-    ctx.font = 'bold 12px Arial'
-    ctx.fillText(formatPointName(key), x + 10, y - 10)
-    ctx.fillStyle = '#FF6347'
-  })
-
-  // 计算详细的面部测量数据
+  // 计算详细的面部测量数据（需要先计算，然后才能显示）
   const measurements = calculateFaceMeasurements(landmarks, scale)
 
+  // 根据模式绘制不同的测量线
+  if (measurementMode === 'all' || measurementMode === 'third') {
+    // 绘制三庭区域框
+    drawThirdRegions(ctx, landmarks, scale, measurements, faceScale)
+  }
+
+  if (measurementMode === 'all' || measurementMode === 'five-eyes') {
+    // 绘制五眼比例区域
+    drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale)
+  }
+
+  // 只在"全部"和"关键点"模式下显示关键点标注
+  if (measurementMode === 'all' || measurementMode === 'keypoints') {
+    // 标记关键点并添加数据标签
+    const keyPoints = {
+      leftEye: { index: 33, label: '左眼', value: `${measurements.leftEyeWidth.toFixed(1)} px` },
+      rightEye: { index: 362, label: '右眼', value: `${measurements.rightEyeWidth.toFixed(1)} px` },
+      noseTip: { index: 1, label: '鼻尖', value: `${measurements.noseHeight.toFixed(1)} px` },
+      mouth: { index: 13, label: '嘴宽', value: `${measurements.mouthWidth.toFixed(1)} px` }
+    }
+
+    // 绘制关键点圆点和标签
+    Object.entries(keyPoints).forEach(([key, pointData]) => {
+      const point = landmarks[pointData.index]
+      const x = point.x * scale.x
+      const y = point.y * scale.y
+
+      // 根据人脸比例调整圆点大小（参考 MediaPipe DrawingSpec）
+      const mainRadius = 5 * faceScale
+      const borderRadius = Math.max(mainRadius + 1.5, mainRadius * 1.3)
+
+      // 绘制圆点外圈边框（灰色半透明背景）
+      ctx.fillStyle = 'rgba(255, 99, 71, 0.15)'
+      ctx.beginPath()
+      ctx.arc(x, y, borderRadius + 2, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // 绘制主圆点（实心）
+      ctx.fillStyle = '#FF6347'
+      ctx.beginPath()
+      ctx.arc(x, y, mainRadius, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // 绘制圆点边框
+      ctx.strokeStyle = '#FF4500'
+      ctx.lineWidth = 1 * faceScale
+      ctx.beginPath()
+      ctx.arc(x, y, mainRadius, 0, 2 * Math.PI)
+      ctx.stroke()
+
+      // 白色内点（高亮）
+      ctx.fillStyle = '#FFFFFF'
+      ctx.beginPath()
+      ctx.arc(x, y, mainRadius * 0.4, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // 绘制标签
+      const label = `${pointData.label}`
+      const value = pointData.value
+
+      // 根据人脸比例调整字体和框大小
+      const fontSize = Math.round(13 * faceScale)
+      const valueSize = Math.round(11 * faceScale)
+      const boxPadding = 8 * faceScale
+      const labelOffset = 18 * faceScale
+
+      // 计算文字宽度和位置
+      ctx.font = `bold ${fontSize}px Arial`
+      const labelMetrics = ctx.measureText(label)
+      const valueMetrics = ctx.measureText(value)
+      const maxWidth = Math.max(labelMetrics.width, valueMetrics.width) + 2 * boxPadding
+      const boxHeight = 42 * faceScale
+
+      // 智能标签位置算法：尝试 12 个位置找最佳点（类似 face-api.js）
+      const positions = [
+        { dx: labelOffset, dy: -labelOffset },      // 右上
+        { dx: labelOffset, dy: 0 },                  // 右
+        { dx: labelOffset, dy: labelOffset },        // 右下
+        { dx: 0, dy: -labelOffset },                 // 上
+        { dx: 0, dy: labelOffset },                  // 下
+        { dx: -labelOffset, dy: -labelOffset },      // 左上
+        { dx: -labelOffset, dy: 0 },                 // 左
+        { dx: -labelOffset, dy: labelOffset },       // 左下
+      ]
+
+      let bestPosition = positions[0]
+      let minBoundaryViolations = Infinity
+
+      positions.forEach(pos => {
+        const testX = x + pos.dx
+        const testY = y + pos.dy
+        let violations = 0
+
+        // 检查边界
+        if (testX - maxWidth / 2 < 0) violations += 10
+        if (testX + maxWidth / 2 > width) violations += 10
+        if (testY - boxHeight / 2 < 0) violations += 10
+        if (testY + boxHeight / 2 > height) violations += 5
+
+        if (violations < minBoundaryViolations) {
+          minBoundaryViolations = violations
+          bestPosition = pos
+        }
+      })
+
+      let labelX = x + bestPosition.dx
+      let labelY = y + bestPosition.dy
+
+      // 边界夹紧（确保完全可见）
+      labelX = Math.max(maxWidth / 2, Math.min(labelX, width - maxWidth / 2))
+      labelY = Math.max(boxHeight / 2, Math.min(labelY, height - boxHeight / 2))
+
+      // 绘制标签背景（圆角矩形）
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.97)'
+      ctx.strokeStyle = '#FF6347'
+      ctx.lineWidth = 1.5 * faceScale
+
+      const boxX = labelX - maxWidth / 2
+      const boxY = labelY - boxHeight / 2
+      drawRoundRect(ctx, boxX, boxY, maxWidth, boxHeight, 5 * faceScale)
+      ctx.fill()
+      ctx.stroke()
+
+      // 绘制连接线（从圆点到标签框边缘）
+      ctx.strokeStyle = '#FF6347'
+      ctx.lineWidth = 1.2 * faceScale
+      ctx.globalAlpha = 0.5
+      ctx.setLineDash([3, 2])
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(labelX, labelY)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1.0
+
+      // 绘制文字（使用 textBaseline 改进对齐）
+      ctx.fillStyle = '#FF6347'
+      ctx.font = `bold ${fontSize}px Arial`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, labelX, labelY - 8 * faceScale)
+
+      ctx.font = `${valueSize}px Arial`
+      ctx.fillStyle = '#555'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(value, labelX, labelY + 10 * faceScale)
+    })
+  }
+
   return measurements
+}
+
+/**
+ * 绘制三庭比例区域
+ */
+function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
+  const forehead = landmarks[10]      // 额头中心
+  const eyeTop = landmarks[159]       // 左眼上方（准确的眼睛上边界）
+  const noseTip = landmarks[1]        // 鼻尖
+  const chin = landmarks[152]         // 下巴
+
+  const leftFace = landmarks[162]     // 脸左侧
+  const rightFace = landmarks[389]    // 脸右侧
+
+  if (!forehead || !eyeTop || !noseTip || !chin || !leftFace || !rightFace) return
+
+  const y1 = forehead.y * scale.y     // 额头高度
+  const y2 = eyeTop.y * scale.y       // 眼睛上边界（更准确的眉毛线）
+  const y3 = noseTip.y * scale.y      // 鼻尖高度
+  const y4 = chin.y * scale.y         // 下巴高度
+
+  const x1 = leftFace.x * scale.x     // 左边界
+  const x2 = rightFace.x * scale.x    // 右边界
+
+  // 根据人脸比例调整线条宽度
+  const lineWidth = 2.5 * faceScale
+  const dashSize = Math.max(6, 6 * faceScale)
+  const fontSize = Math.round(14 * faceScale)
+  const valueFontSize = Math.round(12 * faceScale)
+  const labelBoxWidth = 90 * faceScale
+  const labelBoxHeight = 44 * faceScale
+  const boxRadius = 6 * faceScale
+
+  // 绘制三条水平线（更清晰的样式）
+  ctx.lineWidth = lineWidth
+  ctx.setLineDash([dashSize, 5])
+
+  // 眼睛线
+  ctx.strokeStyle = '#FF6B6B'
+  ctx.globalAlpha = 0.7
+  ctx.beginPath()
+  ctx.moveTo(x1, y2)
+  ctx.lineTo(x2, y2)
+  ctx.stroke()
+
+  // 鼻尖线
+  ctx.strokeStyle = '#4ECDC4'
+  ctx.beginPath()
+  ctx.moveTo(x1, y3)
+  ctx.lineTo(x2, y3)
+  ctx.stroke()
+
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+
+  // 绘制三个区域的标签和数值
+  const regions = [
+    {
+      name: '上庭',
+      value: measurements.thirdUpper,
+      color: '#FF6B6B',
+      y: (y1 + y2) / 2
+    },
+    {
+      name: '中庭',
+      value: measurements.thirdMiddle,
+      color: '#4ECDC4',
+      y: (y2 + y3) / 2
+    },
+    {
+      name: '下庭',
+      value: measurements.thirdLower,
+      color: '#95E1D3',
+      y: (y3 + y4) / 2
+    }
+  ]
+
+  regions.forEach((region, index) => {
+    // 根据位置切换标签位置（左右交替，避免重叠）
+    const isLeft = index % 2 === 0
+    const labelX = isLeft ? x1 - 85 * faceScale : x2 + 30 * faceScale
+    const labelY = region.y
+
+    // 绘制带圆角的标签背景
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)'
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = lineWidth
+
+    const boxX = labelX - labelBoxWidth / 2
+    const boxY = labelY - labelBoxHeight / 2
+
+    drawRoundRect(ctx, boxX, boxY, labelBoxWidth, labelBoxHeight, boxRadius)
+    ctx.fill()
+    ctx.stroke()
+
+    // 绘制指向线（连接标签和测量线）
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = 1.5 * faceScale
+    ctx.globalAlpha = 0.5
+    ctx.setLineDash([3, 3])
+    ctx.beginPath()
+    ctx.moveTo(isLeft ? labelX + labelBoxWidth / 2 : labelX - labelBoxWidth / 2, labelY)
+    ctx.lineTo(isLeft ? x1 - 10 : x2 + 10, labelY)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1.0
+
+    // 绘制标签文字
+    ctx.fillStyle = region.color
+    ctx.font = `bold ${fontSize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.fillText(region.name, labelX, labelY - 4 * faceScale)
+
+    // 绘制数值
+    ctx.font = `${valueFontSize}px Arial`
+    ctx.fillStyle = '#666'
+    ctx.fillText(`${region.value.toFixed(1)} px`, labelX, labelY + 12 * faceScale)
+  })
+}
+
+
+/**
+ * 绘制五眼比例区域
+ */
+function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
+  const leftEyeLeft = landmarks[33]
+  const leftEyeRight = landmarks[130]
+  const rightEyeLeft = landmarks[263]
+  const rightEyeRight = landmarks[362]
+  const foreheadY = landmarks[10].y * scale.y
+  const chinY = landmarks[152].y * scale.y
+
+  if (!leftEyeLeft || !leftEyeRight || !rightEyeLeft || !rightEyeRight) return
+
+  const x1 = leftEyeLeft.x * scale.x
+  const x2 = leftEyeRight.x * scale.x
+  const x3 = rightEyeLeft.x * scale.x
+  const x4 = rightEyeRight.x * scale.x
+  const eyeY = leftEyeLeft.y * scale.y
+
+  // 根据人脸比例调整线条
+  const lineWidth = 2.5 * faceScale
+  const dashSize = Math.max(6, 6 * faceScale)
+
+  // 绘制竖线（分割五个眼睛宽度区域）
+  ctx.lineWidth = lineWidth
+  ctx.setLineDash([dashSize, 5])
+  ctx.globalAlpha = 0.6
+
+  const lines = [
+    { x: x1, color: '#FF69B4' },
+    { x: x2, color: '#8E7DBE' },
+    { x: x3, color: '#8E7DBE' },
+    { x: x4, color: '#FF1493' }
+  ]
+
+  lines.forEach(line => {
+    ctx.strokeStyle = line.color
+    ctx.beginPath()
+    ctx.moveTo(line.x, foreheadY)
+    ctx.lineTo(line.x, chinY)
+    ctx.stroke()
+  })
+
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+
+  // 绘制五个眼睛宽度区域的标签
+  const regions = [
+    {
+      name: '左眼',
+      value: measurements.leftEyeWidth,
+      color: '#FF69B4',
+      x: (x1 + x2) / 2
+    },
+    {
+      name: '眼距',
+      value: measurements.eyeDistance,
+      color: '#8E7DBE',
+      x: (x2 + x3) / 2
+    },
+    {
+      name: '右眼',
+      value: measurements.rightEyeWidth,
+      color: '#FF1493',
+      x: (x3 + x4) / 2
+    }
+  ]
+
+  const fontSize = Math.round(14 * faceScale)
+  const valueFontSize = Math.round(12 * faceScale)
+  const labelBoxWidth = 110 * faceScale
+  const labelBoxHeight = 44 * faceScale
+  const boxRadius = 6 * faceScale
+
+  regions.forEach(region => {
+    const labelX = region.x
+    const labelY = foreheadY - 35 * faceScale
+
+    // 防止超出边界
+    const canvasWidth = ctx.canvas.width
+    let finalX = Math.max(60 * faceScale, Math.min(labelX, canvasWidth - 60 * faceScale))
+
+    // 绘制带圆角的标签背景
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)'
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = lineWidth
+
+    const boxX = finalX - labelBoxWidth / 2
+    const boxY = labelY - labelBoxHeight / 2
+
+    drawRoundRect(ctx, boxX, boxY, labelBoxWidth, labelBoxHeight, boxRadius)
+    ctx.fill()
+    ctx.stroke()
+
+    // 绘制指向线（连接标签和竖线）
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = 1.5 * faceScale
+    ctx.globalAlpha = 0.4
+    ctx.setLineDash([3, 3])
+    ctx.beginPath()
+    ctx.moveTo(finalX, labelY + labelBoxHeight / 2)
+    ctx.lineTo(finalX, foreheadY + 30 * faceScale)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1.0
+
+    // 绘制标签文字
+    ctx.fillStyle = region.color
+    ctx.font = `bold ${fontSize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.fillText(region.name, finalX, labelY - 4 * faceScale)
+
+    // 绘制数值
+    ctx.font = `${valueFontSize}px Arial`
+    ctx.fillStyle = '#666'
+    ctx.fillText(`${region.value.toFixed(1)} px`, finalX, labelY + 12 * faceScale)
+  })
+}
+
+/**
+ * 绘制测量线
+ */
+function drawMeasurementLine(ctx, landmarks, scale, config) {
+  const p1 = landmarks[config.p1Index]
+  const p2 = landmarks[config.p2Index]
+
+  if (!p1 || !p2) return
+
+  const x1 = p1.x * scale.x
+  const y1 = p1.y * scale.y
+  const x2 = p2.x * scale.x
+  const y2 = p2.y * scale.y
+
+  // 绘制测量线
+  ctx.strokeStyle = config.color
+  ctx.lineWidth = 2
+  ctx.setLineDash([4, 4])
+  ctx.beginPath()
+  ctx.moveTo(x1, y1)
+  ctx.lineTo(x2, y2)
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  // 绘制端点圆
+  ctx.fillStyle = config.color
+  ctx.beginPath()
+  ctx.arc(x1, y1, 3, 0, 2 * Math.PI)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(x2, y2, 3, 0, 2 * Math.PI)
+  ctx.fill()
+
+  // 绘制标注文字
+  const midX = (x1 + x2) / 2
+  const midY = (y1 + y2) / 2
+  const label = `${config.name}: ${config.value.toFixed(2)} px`
+
+  // 计算文字宽度
+  ctx.font = 'bold 12px Arial'
+  const textMetrics = ctx.measureText(label)
+  const textWidth = textMetrics.width + 8
+
+  // 根据方向放置标签
+  let labelX, labelY
+  if (config.side === 'left') {
+    labelX = x1 - textWidth - 10
+    labelY = (y1 + y2) / 2
+  } else {
+    labelX = midX - textWidth / 2
+    labelY = Math.min(y1, y2) - 15
+  }
+
+  // 绘制背景框
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = config.color
+  ctx.lineWidth = 1
+  ctx.fillRect(labelX - 2, labelY - 14, textWidth, 18)
+  ctx.strokeRect(labelX - 2, labelY - 14, textWidth, 18)
+
+  // 绘制文字
+  ctx.fillStyle = config.color
+  ctx.font = 'bold 11px Arial'
+  ctx.fillText(label, labelX + 2, labelY - 2)
 }
 
 /**
@@ -161,13 +600,13 @@ function calculateFaceMeasurements(landmarks, scale) {
     leftTemple: 21,          // 左太阳穴
     rightTemple: 251,        // 右太阳穴
 
-    // 眼睛关键点
-    leftEyeLeft: 33,         // 左眼左侧
-    leftEyeRight: 130,       // 左眼右侧
+    // 眼睛关键点（修正）
+    leftEyeLeft: 33,         // 左眼外侧（离鼻子远）
+    leftEyeRight: 130,       // 左眼内侧（靠近鼻子）
     leftEyeTop: 159,         // 左眼上方
     leftEyeBottom: 145,      // 左眼下方
-    rightEyeLeft: 362,       // 右眼左侧
-    rightEyeRight: 263,      // 右眼右侧
+    rightEyeLeft: 263,       // 右眼内侧（靠近鼻子）
+    rightEyeRight: 362,      // 右眼外侧（离鼻子远）
     rightEyeTop: 386,        // 右眼上方
     rightEyeBottom: 374,     // 右眼下方
 
@@ -201,59 +640,63 @@ function calculateFaceMeasurements(landmarks, scale) {
   // 1. 脸部总尺寸
   const faceHeight = getDistance(points.foreheadCenter, points.chinTip)
   const faceWidth = getDistance(points.faceLeft, points.faceRight)
-  data.faceHeight = faceHeight.toFixed(2)
-  data.faceWidth = faceWidth.toFixed(2)
+  data.faceHeight = faceHeight
+  data.faceWidth = faceWidth
 
-  // 2. 三庭比例
-  const thirdUpper = getDistance(points.foreheadCenter, landmarks[10])  // 眉毛到额头
-  const thirdMiddle = getDistance(landmarks[10], landmarks[152])         // 眉毛到鼻子
-  const thirdLower = getDistance(landmarks[152], points.chinTip)         // 鼻子到下巴
-  data.thirdUpper = thirdUpper.toFixed(2)
-  data.thirdMiddle = thirdMiddle.toFixed(2)
-  data.thirdLower = thirdLower.toFixed(2)
+  // 2. 三庭比例（美学标准）
+  // 上庭：从眉毛到发际线（用眉毛外角105作为眉线参考）
+  // 中庭：从眉毛到鼻尖
+  // 下庭：从鼻尖到下巴
+  const eyebrow = 105;  // 左眉毛外角
+  const thirdUpper = getDistance(points.foreheadCenter, eyebrow)  // 额头到眉毛
+  const thirdMiddle = getDistance(eyebrow, points.noseTip)        // 眉毛到鼻尖
+  const thirdLower = getDistance(points.noseTip, points.chinTip)  // 鼻尖到下巴
+  data.thirdUpper = thirdUpper
+  data.thirdMiddle = thirdMiddle
+  data.thirdLower = thirdLower
 
   // 3. 五眼比例 (两眼距离 = 一眼宽度)
   const leftEyeWidth = getDistance(points.leftEyeLeft, points.leftEyeRight)
   const rightEyeWidth = getDistance(points.rightEyeLeft, points.rightEyeRight)
   const eyeDistance = getDistance(points.leftEyeRight, points.rightEyeLeft)
-  data.leftEyeWidth = leftEyeWidth.toFixed(2)
-  data.rightEyeWidth = rightEyeWidth.toFixed(2)
-  data.eyeDistance = eyeDistance.toFixed(2)
+  data.leftEyeWidth = leftEyeWidth
+  data.rightEyeWidth = rightEyeWidth
+  data.eyeDistance = eyeDistance
 
   // 4. 眼睛高度
   const leftEyeHeight = getDistance(points.leftEyeTop, points.leftEyeBottom)
   const rightEyeHeight = getDistance(points.rightEyeTop, points.rightEyeBottom)
-  data.leftEyeHeight = leftEyeHeight.toFixed(2)
-  data.rightEyeHeight = rightEyeHeight.toFixed(2)
+  data.leftEyeHeight = leftEyeHeight
+  data.rightEyeHeight = rightEyeHeight
 
   // 5. 鼻子尺寸
   const noseWidth = getDistance(points.noseLeft, points.noseRight)
   const noseHeight = getDistance(points.noseTop, points.noseTip)
-  data.noseWidth = noseWidth.toFixed(2)
-  data.noseHeight = noseHeight.toFixed(2)
+  data.noseWidth = noseWidth
+  data.noseHeight = noseHeight
 
   // 6. 嘴巴尺寸
   const mouthWidth = getDistance(points.mouthLeft, points.mouthRight)
   const mouthHeight = getDistance(points.mouthTop, points.mouthBottom)
-  data.mouthWidth = mouthWidth.toFixed(2)
-  data.mouthHeight = mouthHeight.toFixed(2)
+  data.mouthWidth = mouthWidth
+  data.mouthHeight = mouthHeight
 
   // 7. 关键点坐标
   data.leftEyeCoord = {
-    x: (landmarks[points.leftEyeLeft]?.x * scale.x).toFixed(2) || '0.00',
-    y: (landmarks[points.leftEyeLeft]?.y * scale.y).toFixed(2) || '0.00'
+    x: landmarks[points.leftEyeLeft]?.x * scale.x || 0,
+    y: landmarks[points.leftEyeLeft]?.y * scale.y || 0
   }
   data.rightEyeCoord = {
-    x: (landmarks[points.rightEyeLeft]?.x * scale.x).toFixed(2) || '0.00',
-    y: (landmarks[points.rightEyeLeft]?.y * scale.y).toFixed(2) || '0.00'
+    x: landmarks[points.rightEyeLeft]?.x * scale.x || 0,
+    y: landmarks[points.rightEyeLeft]?.y * scale.y || 0
   }
   data.noseCoord = {
-    x: (landmarks[points.noseTip]?.x * scale.x).toFixed(2) || '0.00',
-    y: (landmarks[points.noseTip]?.y * scale.y).toFixed(2) || '0.00'
+    x: landmarks[points.noseTip]?.x * scale.x || 0,
+    y: landmarks[points.noseTip]?.y * scale.y || 0
   }
   data.mouthCoord = {
-    x: (landmarks[points.mouthLeft]?.x * scale.x).toFixed(2) || '0.00',
-    y: (landmarks[points.mouthLeft]?.y * scale.y).toFixed(2) || '0.00'
+    x: landmarks[points.mouthLeft]?.x * scale.x || 0,
+    y: landmarks[points.mouthLeft]?.y * scale.y || 0
   }
 
   return data
@@ -277,6 +720,23 @@ function drawConnectedPoints(ctx, landmarks, indices, scale) {
   // 闭合路径
   ctx.lineTo(landmarks[indices[0]].x * scale.x, landmarks[indices[0]].y * scale.y)
   ctx.stroke()
+}
+
+/**
+ * 绘制圆角矩形
+ */
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + width - radius, y)
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
+  ctx.lineTo(x + width, y + height - radius)
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
+  ctx.lineTo(x + radius, y + height)
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
 }
 
 /**
