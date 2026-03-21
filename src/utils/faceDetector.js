@@ -1,5 +1,7 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 
+let faceLandmarker = null
+
 /**
  * 自动检测和修正关键点索引
  */
