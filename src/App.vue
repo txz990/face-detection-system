@@ -298,9 +298,18 @@ const detectFace = async () => {
   isLoading.value = true
   try {
     const result = await detectFaceInImage(imageUrl.value, currentMeasurementMode.value)
-    console.log('检测结果:', result)
-    console.log('人脸数据:', result.landmarks)
-    printAllMeasurements(result.landmarks)  // 打印所有测量数据
+
+    // 打印所有数据到控制台
+    console.log('===== 完整检测结果 =====')
+    console.log('检测结果对象:', result)
+    console.log('')
+    console.log('📊 计算后的测量数据:', result.landmarks)
+    console.log('')
+    printAllMeasurements(result.landmarks)
+    console.log('')
+    console.log('📌 原始 API 返回的 468 个关键点:', result.rawLandmarks)
+    console.log('========================')
+
     resultImageData.value = result  // 保存原始结果
     resultImage.value = result.canvas
     faceData.value = result.landmarks

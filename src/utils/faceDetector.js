@@ -61,9 +61,16 @@ export async function detectFaceInImage(imageUrl, measurementMode = 'all') {
         const landmarks = results.faceLandmarks[0]
         const data = drawLandmarks(ctx, landmarks, img.width, img.height, measurementMode)
 
+        // 打印所有原始 API 数据到控制台
+        console.log('====== 原始 API 返回数据 ======')
+        console.log('📌 总共检测到', landmarks.length, '个关键点')
+        console.log('🔍 完整的 468 个关键点坐标:', landmarks)
+        console.log('=====================================')
+
         resolve({
           canvas: canvas.toDataURL('image/png'),
-          landmarks: data
+          landmarks: data,
+          rawLandmarks: landmarks  // 返回原始数据
         })
       } catch (error) {
         reject(error)
