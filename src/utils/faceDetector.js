@@ -329,7 +329,7 @@ function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
 }
 
 /**
- * 绘制脸部尺寸（脸高和脸宽）
+ * 绘制脸部尺寸（脸高、中庭、脸宽及其他宽度参数）
  */
 function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const forehead = landmarks[10]      // 额头中心
@@ -338,15 +338,28 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const faceRight = landmarks[389]    // 脸右侧
   const eyeTop = landmarks[159]       // 左眼上方（眉线参考）
   const noseTip = landmarks[1]        // 鼻尖
+  const leftTemple = landmarks[21]    // 左太阳穴
+  const rightTemple = landmarks[251]  // 右太阳穴
+  const leftJaw = landmarks[148]      // 左下颌
+  const rightJaw = landmarks[397]     // 右下颌
 
-  if (!forehead || !chin || !faceLeft || !faceRight || !eyeTop || !noseTip) return
+  if (!forehead || !chin || !faceLeft || !faceRight || !eyeTop || !noseTip ||
+      !leftTemple || !rightTemple || !leftJaw || !rightJaw) return
 
   const foreheadY = forehead.y * scale.y
+  const chinX = chin.x * scale.x
   const chinY = chin.y * scale.y
   const leftX = faceLeft.x * scale.x
   const rightX = faceRight.x * scale.x
   const eyeTopY = eyeTop.y * scale.y
   const noseTipY = noseTip.y * scale.y
+  const leftTempleX = leftTemple.x * scale.x
+  const rightTempleX = rightTemple.x * scale.x
+  const leftJawX = leftJaw.x * scale.x
+  const rightJawX = rightJaw.x * scale.x
+  const templeY = leftTemple.y * scale.y
+  const jawY = leftJaw.y * scale.y
+  const rightJawY = rightJaw.y * scale.y
 
   // 线条样式
   const lineWidth = 2 * faceScale
@@ -354,7 +367,7 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const fontSize = Math.round(12 * faceScale)
   const valueFontSize = Math.round(11 * faceScale)
 
-  // 脸高标注（左侧竖线）
+  // ===== 脸高标注（左侧竖线） =====
   ctx.strokeStyle = '#8B5CF6'
   ctx.lineWidth = lineWidth
   ctx.globalAlpha = 0.7
@@ -371,9 +384,9 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   drawArrow(ctx, heightX, foreheadY - arrowSize/2, heightX, foreheadY + arrowSize/2, '#8B5CF6', arrowSize)
   drawArrow(ctx, heightX, chinY + arrowSize/2, heightX, chinY - arrowSize/2, '#8B5CF6', arrowSize)
 
-  // 脸高标签
+  // 脸高标签（与脸宽标签对齐）
   const heightLabelX = heightX - 25 * faceScale
-  const heightLabelY = (foreheadY + chinY) / 2
+  const heightLabelY = foreheadY - 75 * faceScale  // 与脸宽标签Y位置对齐
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
   ctx.strokeStyle = '#8B5CF6'
   ctx.lineWidth = 1.5 * faceScale
@@ -391,63 +404,26 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.fillStyle = '#666'
   ctx.fillText(`${measurements.faceHeight.toFixed(1)} px`, heightLabelX, heightLabelY + 10 * faceScale)
 
-  // 中庭标注（上方 - 从额头到眼睛之间）
-  ctx.strokeStyle = '#4ECDC4'
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-  const thirdY = eyeTopY - 30 * faceScale
-  ctx.beginPath()
-  ctx.moveTo(leftX, thirdY)
-  ctx.lineTo(rightX, thirdY)
-  ctx.stroke()
-
-  // 中庭箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftX - arrowSize/2, thirdY, leftX + arrowSize/2, thirdY, '#4ECDC4', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, thirdY, rightX - arrowSize/2, thirdY, '#4ECDC4', arrowSize)
-
-  // 中庭标签
-  const thirdLabelX = (leftX + rightX) / 2
-  const thirdLabelY = thirdY - 25 * faceScale
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#4ECDC4'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, thirdLabelX - 35 * faceScale, thirdLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#4ECDC4'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('中庭', thirdLabelX, thirdLabelY - 8 * faceScale)
-
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.thirdMiddle.toFixed(1)} px`, thirdLabelX, thirdLabelY + 10 * faceScale)
-
-  // 脸宽标注（右侧竖线）
+  // ===== 脸宽标注（上方，在五眼标签上方） =====
   ctx.strokeStyle = '#EC4899'
   ctx.lineWidth = lineWidth
   ctx.globalAlpha = 0.7
   ctx.setLineDash([5, 5])
-  const widthY = rightX + 30 * faceScale
+  const widthY = foreheadY - 50 * faceScale  // 上移：在五眼标签上方
   ctx.beginPath()
-  ctx.moveTo(rightX, foreheadY)
-  ctx.lineTo(rightX, chinY)
+  ctx.moveTo(leftX, widthY)
+  ctx.lineTo(rightX, widthY)
   ctx.stroke()
 
   // 脸宽箭头标记
   ctx.setLineDash([])
   ctx.globalAlpha = 1.0
-  drawArrow(ctx, rightX - arrowSize/2, foreheadY, rightX + arrowSize/2, foreheadY, '#EC4899', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, chinY, rightX - arrowSize/2, chinY, '#EC4899', arrowSize)
+  drawArrow(ctx, leftX - arrowSize/2, widthY, leftX + arrowSize/2, widthY, '#EC4899', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, widthY, rightX - arrowSize/2, widthY, '#EC4899', arrowSize)
 
   // 脸宽标签
-  const widthLabelX = rightX + 25 * faceScale
-  const widthLabelY = (foreheadY + chinY) / 2
+  const widthLabelX = (leftX + rightX) / 2
+  const widthLabelY = widthY - 25 * faceScale
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
   ctx.strokeStyle = '#EC4899'
   ctx.lineWidth = 1.5 * faceScale
@@ -464,6 +440,123 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.font = `${valueFontSize}px Arial`
   ctx.fillStyle = '#666'
   ctx.fillText(`${measurements.faceWidth.toFixed(1)} px`, widthLabelX, widthLabelY + 10 * faceScale)
+
+  // ===== 颞部宽度标注 =====
+  ctx.strokeStyle = '#F97316'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  const templeLineY = templeY
+  ctx.beginPath()
+  ctx.moveTo(leftTempleX, templeLineY)
+  ctx.lineTo(rightTempleX, templeLineY)
+  ctx.stroke()
+
+  // 颞部宽度箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftTempleX - arrowSize/2, templeLineY, leftTempleX + arrowSize/2, templeLineY, '#F97316', arrowSize)
+  drawArrow(ctx, rightTempleX + arrowSize/2, templeLineY, rightTempleX - arrowSize/2, templeLineY, '#F97316', arrowSize)
+
+  // 颞部宽度标签
+  const templeLabelX = (leftTempleX + rightTempleX) / 2
+  const templeLabelY = templeLineY - 25 * faceScale
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#F97316'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, templeLabelX - 40 * faceScale, templeLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#F97316'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('颞部宽', templeLabelX, templeLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.templeWidth.toFixed(1)} px`, templeLabelX, templeLabelY + 10 * faceScale)
+
+  // ===== 颧骨宽度标注 =====
+  ctx.strokeStyle = '#06B6D4'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  const cheekboneLineY = (foreheadY + noseTipY) / 2  // 颧骨在脸的中部
+  ctx.beginPath()
+  ctx.moveTo(leftX, cheekboneLineY)
+  ctx.lineTo(rightX, cheekboneLineY)
+  ctx.stroke()
+
+  // 颧骨宽度箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftX - arrowSize/2, cheekboneLineY, leftX + arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, cheekboneLineY, rightX - arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
+
+  // 颧骨宽度标签
+  const cheekboneLabelX = (leftX + rightX) / 2
+  const cheekboneLabelY = cheekboneLineY + 25 * faceScale
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#06B6D4'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, cheekboneLabelX - 40 * faceScale, cheekboneLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#06B6D4'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('颧骨宽', cheekboneLabelX, cheekboneLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.cheekboneWidth.toFixed(1)} px`, cheekboneLabelX, cheekboneLabelY + 10 * faceScale)
+
+  // ===== 下颌角宽度标注 =====
+  ctx.strokeStyle = '#EF4444'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  // 从下巴尖尖分别连到左右下颌角
+  ctx.beginPath()
+  ctx.moveTo(chinX, chinY)
+  ctx.lineTo(leftJawX, jawY)
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.moveTo(chinX, chinY)
+  ctx.lineTo(rightJawX, rightJawY)
+  ctx.stroke()
+
+  // 下颌角宽度箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, chinX, chinY + arrowSize/2, chinX, chinY - arrowSize/2, '#EF4444', arrowSize)
+  drawArrow(ctx, leftJawX - arrowSize/2, jawY - arrowSize/2, leftJawX + arrowSize/2, jawY + arrowSize/2, '#EF4444', arrowSize)
+  drawArrow(ctx, rightJawX + arrowSize/2, rightJawY + arrowSize/2, rightJawX - arrowSize/2, rightJawY - arrowSize/2, '#EF4444', arrowSize)
+
+  // 下颌角宽度标签
+  const jawLabelX = chinX
+  const jawLabelY = chinY + 35 * faceScale
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#EF4444'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, jawLabelX - 45 * faceScale, jawLabelY - 20 * faceScale, 90 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#EF4444'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('下颌角宽', jawLabelX, jawLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.jawWidth.toFixed(1)} px`, jawLabelX, jawLabelY + 10 * faceScale)
 }
 
 /**
@@ -861,6 +954,14 @@ function calculateFaceMeasurements(landmarks, scale) {
   const faceWidth = getDistance(points.faceLeft, points.faceRight)
   data.faceHeight = faceHeight
   data.faceWidth = faceWidth
+
+  // 1.5. 脸部宽度变化（颞部、颧骨、下颌角）
+  const templeWidth = getDistance(points.leftTemple, points.rightTemple)  // 颞部宽度
+  const cheekboneWidth = faceWidth  // 颧骨宽度（与脸宽相同）
+  const jawWidth = getDistance(148, 397)  // 下颌角宽度（左下颌148到右下颌397）
+  data.templeWidth = templeWidth
+  data.cheekboneWidth = cheekboneWidth
+  data.jawWidth = jawWidth
 
   // 2. 三庭比例（美学标准）
   // 上庭：从眉毛到发际线（用眉毛外角105作为眉线参考）

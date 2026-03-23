@@ -5,25 +5,78 @@
       <div class="login-box">
         <div class="login-icon">🔐</div>
         <h2>人脸五官检测系统</h2>
-        <p class="login-subtitle">请输入密码以继续</p>
 
-        <div class="login-form">
-          <input
-            v-model="password"
-            type="password"
-            placeholder="输入密码"
-            class="password-input"
-            @keyup.enter="handleLogin"
-            autofocus
-          />
+        <!-- 登录模式 -->
+        <div v-if="!showChangePassword">
+          <p class="login-subtitle">请输入密码以继续</p>
 
-          <button @click="handleLogin" class="login-btn">
-            登 入
-          </button>
+          <div class="login-form">
+            <input
+              v-model="password"
+              type="password"
+              placeholder="输入密码"
+              class="password-input"
+              @keyup.enter="handleLogin"
+              autofocus
+            />
 
-          <p v-if="loginError" class="error-message">
-            ❌ {{ loginError }}
-          </p>
+            <button @click="handleLogin" class="login-btn">
+              登 入
+            </button>
+
+            <p v-if="loginError" class="error-message">
+              ❌ {{ loginError }}
+            </p>
+
+            <button @click="showChangePassword = true" class="change-pwd-link">
+              更改密码
+            </button>
+          </div>
+        </div>
+
+        <!-- 更改密码模式 -->
+        <div v-else>
+          <p class="login-subtitle">更改密码</p>
+
+          <div class="login-form">
+            <input
+              v-model="changePwdForm.oldPassword"
+              type="password"
+              placeholder="当前密码"
+              class="password-input"
+            />
+
+            <input
+              v-model="changePwdForm.newPassword"
+              type="password"
+              placeholder="新密码"
+              class="password-input"
+            />
+
+            <input
+              v-model="changePwdForm.confirmPassword"
+              type="password"
+              placeholder="确认新密码"
+              class="password-input"
+              @keyup.enter="handleChangePassword"
+            />
+
+            <button @click="handleChangePassword" class="login-btn">
+              确认修改
+            </button>
+
+            <p v-if="changePwdError" class="error-message">
+              ❌ {{ changePwdError }}
+            </p>
+
+            <p v-if="changePwdSuccess" class="success-message">
+              ✅ {{ changePwdSuccess }}
+            </p>
+
+            <button @click="resetChangePassword" class="change-pwd-link">
+              返回登录
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -47,7 +100,7 @@
             🧹 清除所有
           </button>
           <button @click="handleLogout" class="logout-btn" title="退出登录">
-            🚪 退出
+            退出
           </button>
         </div>
       </div>
@@ -161,7 +214,7 @@
           <div class="data-section">
             <div class="section-title">脸部基本尺寸</div>
             <div class="data-grid">
-              <div v-for="key in ['faceHeight', 'faceWidth']" :key="key" class="data-item">
+              <div v-for="key in ['faceHeight', 'faceWidth', 'templeWidth', 'cheekboneWidth', 'jawWidth']" :key="key" class="data-item">
                 <div class="data-info">
                   <span class="label">{{ formatLabel(key) }}</span>
                   <span class="value">{{ formatValue(faceData[key]) }}</span>
@@ -280,10 +333,23 @@ import { initializeFaceDetector, detectFaceInImage, printAllMeasurements } from 
 const isAuthenticated = ref(false)
 const password = ref('')
 const loginError = ref('')
-const CORRECT_PASSWORD = 'admin'  // 正确密码
+const showChangePassword = ref(false)
+const changePwdForm = ref({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const changePwdError = ref('')
+const changePwdSuccess = ref('')
+
+// 从localStorage获取密码，如果没有使用默认密码
+const getStoredPassword = () => {
+  return localStorage.getItem('faceDetectorPassword') || 'admin'
+}
 
 const handleLogin = () => {
-  if (password.value === CORRECT_PASSWORD) {
+  const correctPassword = getStoredPassword()
+  if (password.value === correctPassword) {
     isAuthenticated.value = true
     localStorage.setItem('faceDetectorAuth', 'authenticated')
     loginError.value = ''
@@ -292,6 +358,51 @@ const handleLogin = () => {
     loginError.value = '密码错误，请重试'
     password.value = ''
   }
+}
+
+const handleChangePassword = () => {
+  changePwdError.value = ''
+  changePwdSuccess.value = ''
+
+  const correctPassword = getStoredPassword()
+
+  // 验证当前密码
+  if (changePwdForm.value.oldPassword !== correctPassword) {
+    changePwdError.value = '当前密码错误'
+    return
+  }
+
+  // 验证新密码不为空
+  if (!changePwdForm.value.newPassword || changePwdForm.value.newPassword.length < 4) {
+    changePwdError.value = '新密码至少4个字符'
+    return
+  }
+
+  // 验证两次输入密码是否一致
+  if (changePwdForm.value.newPassword !== changePwdForm.value.confirmPassword) {
+    changePwdError.value = '两次输入的密码不一致'
+    return
+  }
+
+  // 保存新密码
+  localStorage.setItem('faceDetectorPassword', changePwdForm.value.newPassword)
+  changePwdSuccess.value = '密码修改成功，请用新密码登录'
+
+  // 2秒后返回登录界面
+  setTimeout(() => {
+    resetChangePassword()
+  }, 2000)
+}
+
+const resetChangePassword = () => {
+  showChangePassword.value = false
+  changePwdForm.value = {
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  changePwdError.value = ''
+  changePwdSuccess.value = ''
 }
 
 const handleLogout = () => {
@@ -436,6 +547,9 @@ const getIcon = (key) => {
   const icons = {
     faceHeight: '📏',
     faceWidth: '↔️',
+    templeWidth: '⬌',
+    cheekboneWidth: '↔️',
+    jawWidth: '⬌',
     thirdUpper: '💆',
     thirdMiddle: '👁️',
     thirdLower: '👄',
@@ -462,6 +576,9 @@ const formatLabel = (key) => {
   const labels = {
     faceHeight: '脸部高度',
     faceWidth: '脸部宽度',
+    templeWidth: '颞部宽度',
+    cheekboneWidth: '颧骨宽度',
+    jawWidth: '下颌角宽度',
     thirdUpper: '上庭（额头）',
     thirdMiddle: '中庭（眼到鼻）',
     thirdLower: '下庭（鼻到下巴）',
@@ -617,6 +734,38 @@ const formatValue = (value) => {
   margin: 0;
   font-size: 0.9rem;
   animation: shake 0.5s ease-in-out;
+}
+
+.success-message {
+  color: #10b981;
+  margin: 0;
+  font-size: 0.9rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.change-pwd-link {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: none;
+  color: #6366f1;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  transition: all 0.2s ease;
+}
+
+.change-pwd-link:hover {
+  color: #764ba2;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shake {
