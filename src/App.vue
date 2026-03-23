@@ -384,7 +384,7 @@ const handleChangePassword = () => {
     return
   }
 
-  // 保存新密码
+  // 保存新密码到localStorage
   localStorage.setItem('faceDetectorPassword', changePwdForm.value.newPassword)
   changePwdSuccess.value = '密码修改成功，请用新密码登录'
 

@@ -34,6 +34,16 @@ function autoDetectKeypoints(landmarks, imgWidth, imgHeight) {
   })
 
   console.log('---')
+
+  // 调试：输出下颌相关关键点
+  console.log('📍 下颌区域关键点坐标（X, Y）:')
+  const jawCandidates = [148, 149, 150, 176, 177, 178, 397, 398, 399]
+  jawCandidates.forEach(idx => {
+    const point = landmarks[idx]
+    if (point) {
+      console.log(`  landmarks[${idx}]: (${(point.x * imgWidth).toFixed(0)}, ${(point.y * imgHeight).toFixed(0)})`)
+    }
+  })
 }
 
 
@@ -340,26 +350,59 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const noseTip = landmarks[1]        // 鼻尖
   const leftTemple = landmarks[21]    // 左太阳穴
   const rightTemple = landmarks[251]  // 右太阳穴
-  const leftJaw = landmarks[148]      // 左下颌
-  const rightJaw = landmarks[397]     // 右下颌
+  const mouthBottom = landmarks[14]   // 嘴巴下方中心
 
   if (!forehead || !chin || !faceLeft || !faceRight || !eyeTop || !noseTip ||
-      !leftTemple || !rightTemple || !leftJaw || !rightJaw) return
+      !leftTemple || !rightTemple || !mouthBottom) return
+
+  // 找下颌最外侧的点（通过遍历脸部轮廓，找在下颌高度最左和最右的点）
+  const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
+  const chinY = chin.y * scale.y
+  const mouthBottomY = mouthBottom.y * scale.y
+
+  // 在下颌区域（下巴附近的纵向范围内）找最左和最右的点
+  let jawLeftPoint = null
+  let jawRightPoint = null
+  let minX = Infinity
+  let maxX = -Infinity
+
+  // 只看 Y 坐标在下颌附近的点（下巴之下，嘴巴附近）
+  const jawYRange = { min: mouthBottomY, max: chin.y * scale.y + 50 * faceScale }
+
+  FACE_OVAL.forEach(idx => {
+    const point = landmarks[idx]
+    if (!point) return
+    const x = point.x * scale.x
+    const y = point.y * scale.y
+
+    // 在下颌Y坐标范围内，找最左和最右的点
+    if (y >= jawYRange.min - 30 * faceScale && y <= jawYRange.max) {
+      if (x < minX) {
+        minX = x
+        jawLeftPoint = point
+      }
+      if (x > maxX) {
+        maxX = x
+        jawRightPoint = point
+      }
+    }
+  })
+
+  const leftJawX = jawLeftPoint ? jawLeftPoint.x * scale.x : faceLeft.x * scale.x
+  const rightJawX = jawRightPoint ? jawRightPoint.x * scale.x : faceRight.x * scale.x
 
   const foreheadY = forehead.y * scale.y
   const chinX = chin.x * scale.x
-  const chinY = chin.y * scale.y
+  const chinY_val = chin.y * scale.y
   const leftX = faceLeft.x * scale.x
   const rightX = faceRight.x * scale.x
   const eyeTopY = eyeTop.y * scale.y
   const noseTipY = noseTip.y * scale.y
   const leftTempleX = leftTemple.x * scale.x
   const rightTempleX = rightTemple.x * scale.x
-  const leftJawX = leftJaw.x * scale.x
-  const rightJawX = rightJaw.x * scale.x
   const templeY = leftTemple.y * scale.y
-  const jawY = leftJaw.y * scale.y
-  const rightJawY = rightJaw.y * scale.y
+  const jawY = jawLeftPoint ? jawLeftPoint.y * scale.y : mouthBottomY
+  const rightJawY = jawRightPoint ? jawRightPoint.y * scale.y : mouthBottomY
 
   // 线条样式
   const lineWidth = 2 * faceScale
@@ -375,14 +418,14 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const heightX = leftX - 30 * faceScale
   ctx.beginPath()
   ctx.moveTo(heightX, foreheadY)
-  ctx.lineTo(heightX, chinY)
+  ctx.lineTo(heightX, chinY_val)
   ctx.stroke()
 
   // 脸高箭头标记
   ctx.setLineDash([])
   ctx.globalAlpha = 1.0
   drawArrow(ctx, heightX, foreheadY - arrowSize/2, heightX, foreheadY + arrowSize/2, '#8B5CF6', arrowSize)
-  drawArrow(ctx, heightX, chinY + arrowSize/2, heightX, chinY - arrowSize/2, '#8B5CF6', arrowSize)
+  drawArrow(ctx, heightX, chinY_val + arrowSize/2, heightX, chinY_val - arrowSize/2, '#8B5CF6', arrowSize)
 
   // 脸高标签（与脸宽标签对齐）
   const heightLabelX = heightX - 25 * faceScale
@@ -479,25 +522,15 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.fillText(`${measurements.templeWidth.toFixed(1)} px`, templeLabelX, templeLabelY + 10 * faceScale)
 
   // ===== 颧骨宽度标注 =====
-  ctx.strokeStyle = '#06B6D4'
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-  const cheekboneLineY = (foreheadY + noseTipY) / 2  // 颧骨在脸的中部
-  ctx.beginPath()
-  ctx.moveTo(leftX, cheekboneLineY)
-  ctx.lineTo(rightX, cheekboneLineY)
-  ctx.stroke()
+  // 注：颧骨宽度与脸宽相同，共享脸宽的线条，这里只标注
+  // 颧骨最宽处在眼睛下方和鼻子之间，取眼睛下方点的Y坐标
+  const eyeBottom = landmarks[145]  // 左眼下方
+  const eyeBottomY = eyeBottom ? eyeBottom.y * scale.y : (eyeTopY + noseTipY) / 2
+  const cheekboneLineY = eyeBottomY
 
-  // 颧骨宽度箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftX - arrowSize/2, cheekboneLineY, leftX + arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, cheekboneLineY, rightX - arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
-
-  // 颧骨宽度标签
+  // 颧骨宽度标签（无需绘制线条，共享脸宽线条）
   const cheekboneLabelX = (leftX + rightX) / 2
-  const cheekboneLabelY = cheekboneLineY + 25 * faceScale
+  const cheekboneLabelY = cheekboneLineY - 40 * faceScale  // 标签在颧骨线上方
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
   ctx.strokeStyle = '#06B6D4'
   ctx.lineWidth = 1.5 * faceScale
@@ -515,44 +548,39 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.fillStyle = '#666'
   ctx.fillText(`${measurements.cheekboneWidth.toFixed(1)} px`, cheekboneLabelX, cheekboneLabelY + 10 * faceScale)
 
-  // ===== 下颌角宽度标注 =====
-  ctx.strokeStyle = '#EF4444'
+  // ===== 下颌宽度标注（在下嘴唇附近） =====
+  ctx.strokeStyle = '#FF6347'
   ctx.lineWidth = lineWidth
   ctx.globalAlpha = 0.7
   ctx.setLineDash([5, 5])
-  // 从下巴尖尖分别连到左右下颌角
-  ctx.beginPath()
-  ctx.moveTo(chinX, chinY)
-  ctx.lineTo(leftJawX, jawY)
-  ctx.stroke()
 
+  // 在下嘴唇高度绘制横线（从左下颌到右下颌，自动匹配脸型大小）
   ctx.beginPath()
-  ctx.moveTo(chinX, chinY)
-  ctx.lineTo(rightJawX, rightJawY)
+  ctx.moveTo(leftJawX, jawY)
+  ctx.lineTo(rightJawX, jawY)
   ctx.stroke()
-
-  // 下颌角宽度箭头标记
   ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, chinX, chinY + arrowSize/2, chinX, chinY - arrowSize/2, '#EF4444', arrowSize)
-  drawArrow(ctx, leftJawX - arrowSize/2, jawY - arrowSize/2, leftJawX + arrowSize/2, jawY + arrowSize/2, '#EF4444', arrowSize)
-  drawArrow(ctx, rightJawX + arrowSize/2, rightJawY + arrowSize/2, rightJawX - arrowSize/2, rightJawY - arrowSize/2, '#EF4444', arrowSize)
 
-  // 下颌角宽度标签
-  const jawLabelX = chinX
-  const jawLabelY = chinY + 35 * faceScale
+  // 下颌宽度箭头标记
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftJawX - arrowSize/2, jawY, leftJawX + arrowSize/2, jawY, '#FF6347', arrowSize)
+  drawArrow(ctx, rightJawX + arrowSize/2, jawY, rightJawX - arrowSize/2, jawY, '#FF6347', arrowSize)
+
+  // 下颌宽度标签
+  const jawLabelX = (leftJawX + rightJawX) / 2
+  const jawLabelY = jawY + 30 * faceScale
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#EF4444'
+  ctx.strokeStyle = '#FF6347'
   ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, jawLabelX - 45 * faceScale, jawLabelY - 20 * faceScale, 90 * faceScale, 40 * faceScale, 4 * faceScale)
+  drawRoundRect(ctx, jawLabelX - 40 * faceScale, jawLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
   ctx.fill()
   ctx.stroke()
 
-  ctx.fillStyle = '#EF4444'
+  ctx.fillStyle = '#FF6347'
   ctx.font = `bold ${fontSize}px Arial`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('下颌角宽', jawLabelX, jawLabelY - 8 * faceScale)
+  ctx.fillText('下颌宽', jawLabelX, jawLabelY - 8 * faceScale)
 
   ctx.font = `${valueFontSize}px Arial`
   ctx.fillStyle = '#666'
@@ -593,7 +621,9 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
 
   if (!forehead || !eyeTop || !noseTip || !chin || !leftFace || !rightFace) return
 
-  const y1 = forehead.y * scale.y     // 额头高度
+  const foreheadY = forehead.y * scale.y
+  const hairlineY = foreheadY - 60 * faceScale  // 发际线：额头上方60px（动态缩放）
+  const y1 = hairlineY                // 发际线（上庭上界）
   const y2 = eyeTop.y * scale.y       // 眼睛上边界（更准确的眉毛线）
   const y3 = noseTip.y * scale.y      // 鼻尖高度
   const y4 = chin.y * scale.y         // 下巴高度
@@ -614,7 +644,7 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.lineWidth = lineWidth
   ctx.setLineDash([dashSize, 5])
 
-  // 眼睛线
+  // 眉毛线（上庭下界 = 中庭上界）
   ctx.strokeStyle = '#FF6B6B'
   ctx.globalAlpha = 0.7
   ctx.beginPath()
@@ -622,7 +652,7 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.lineTo(x2, y2)
   ctx.stroke()
 
-  // 鼻尖线
+  // 鼻尖线（中庭下界 = 下庭上界）
   ctx.strokeStyle = '#4ECDC4'
   ctx.beginPath()
   ctx.moveTo(x1, y3)
@@ -958,18 +988,45 @@ function calculateFaceMeasurements(landmarks, scale) {
   // 1.5. 脸部宽度变化（颞部、颧骨、下颌角）
   const templeWidth = getDistance(points.leftTemple, points.rightTemple)  // 颞部宽度
   const cheekboneWidth = faceWidth  // 颧骨宽度（与脸宽相同）
-  const jawWidth = getDistance(148, 397)  // 下颌角宽度（左下颌148到右下颌397）
+
+  // 下颌宽度：在脸部轮廓中找下颌区域最左和最右的点
+  const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
+  const chinPoint = landmarks[points.chinTip]
+  const mouthBottomPoint = landmarks[14]
+  let jawMinX = Infinity
+  let jawMaxX = -Infinity
+
+  if (chinPoint && mouthBottomPoint) {
+    const chinY = chinPoint.y
+    const mouthBottomY = mouthBottomPoint.y
+    const jawYRange = { min: mouthBottomY, max: chinY + 0.05 }
+
+    FACE_OVAL.forEach(idx => {
+      const point = landmarks[idx]
+      if (!point) return
+      if (point.y >= jawYRange.min - 0.02 && point.y <= jawYRange.max) {
+        if (point.x < jawMinX) jawMinX = point.x
+        if (point.x > jawMaxX) jawMaxX = point.x
+      }
+    })
+  }
+
+  const jawWidth = (jawMaxX - jawMinX) > 0 ? (jawMaxX - jawMinX) * scale.x : Math.abs((landmarks[397].x - landmarks[148].x) * scale.x)
   data.templeWidth = templeWidth
   data.cheekboneWidth = cheekboneWidth
   data.jawWidth = jawWidth
 
   // 2. 三庭比例（美学标准）
-  // 上庭：从眉毛到发际线（用眉毛外角105作为眉线参考）
+  // 上庭：从发际线到眉毛
   // 中庭：从眉毛到鼻尖
   // 下庭：从鼻尖到下巴
-  const eyebrow = 105;  // 左眉毛外角
-  const thirdUpper = getDistance(points.foreheadCenter, eyebrow)  // 额头到眉毛
-  const thirdMiddle = getDistance(eyebrow, points.noseTip)        // 眉毛到鼻尖
+  const foreheadL = landmarks[10]
+  const eyeTopL = landmarks[159]  // 眼睛上方作为眉毛线参考
+  const foreheadY = foreheadL.y * scale.y
+  const eyeTopY = eyeTopL.y * scale.y
+  const hairlineY = foreheadY - 60  // 发际线：额头上方60px
+  const thirdUpper = Math.abs(eyeTopY - hairlineY)  // 从发际线到眉毛的距离
+  const thirdMiddle = getDistance(159, 1)  // 眼睛上方到鼻尖
   const thirdLower = getDistance(points.noseTip, points.chinTip)  // 鼻尖到下巴
   data.thirdUpper = thirdUpper
   data.thirdMiddle = thirdMiddle
