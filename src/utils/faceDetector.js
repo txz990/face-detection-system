@@ -193,9 +193,7 @@ function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
   if (measurementMode === 'all' || measurementMode === 'keypoints') {
     // 标记关键点并添加数据标签
     const keyPoints = {
-      leftEye: { index: 33, label: '左眼', value: `${measurements.leftEyeWidth.toFixed(1)} px` },
-      rightEye: { index: 362, label: '右眼', value: `${measurements.rightEyeWidth.toFixed(1)} px` },
-      noseTip: { index: 1, label: '鼻尖', value: `${measurements.noseHeight.toFixed(1)} px` },
+      noseTip: { index: 1, label: '鼻宽', value: `${measurements.noseWidth.toFixed(1)} px` },
       mouth: { index: 13, label: '嘴宽', value: `${measurements.mouthWidth.toFixed(1)} px` }
     }
 
@@ -338,13 +336,17 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const chin = landmarks[152]         // 下巴
   const faceLeft = landmarks[162]     // 脸左侧
   const faceRight = landmarks[389]    // 脸右侧
+  const eyeTop = landmarks[159]       // 左眼上方（眉线参考）
+  const noseTip = landmarks[1]        // 鼻尖
 
-  if (!forehead || !chin || !faceLeft || !faceRight) return
+  if (!forehead || !chin || !faceLeft || !faceRight || !eyeTop || !noseTip) return
 
   const foreheadY = forehead.y * scale.y
   const chinY = chin.y * scale.y
   const leftX = faceLeft.x * scale.x
   const rightX = faceRight.x * scale.x
+  const eyeTopY = eyeTop.y * scale.y
+  const noseTipY = noseTip.y * scale.y
 
   // 线条样式
   const lineWidth = 2 * faceScale
@@ -389,26 +391,63 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.fillStyle = '#666'
   ctx.fillText(`${measurements.faceHeight.toFixed(1)} px`, heightLabelX, heightLabelY + 10 * faceScale)
 
-  // 脸宽标注（上方横线）
+  // 中庭标注（上方 - 从额头到眼睛之间）
+  ctx.strokeStyle = '#4ECDC4'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([5, 5])
+  const thirdY = eyeTopY - 30 * faceScale
+  ctx.beginPath()
+  ctx.moveTo(leftX, thirdY)
+  ctx.lineTo(rightX, thirdY)
+  ctx.stroke()
+
+  // 中庭箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftX - arrowSize/2, thirdY, leftX + arrowSize/2, thirdY, '#4ECDC4', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, thirdY, rightX - arrowSize/2, thirdY, '#4ECDC4', arrowSize)
+
+  // 中庭标签
+  const thirdLabelX = (leftX + rightX) / 2
+  const thirdLabelY = thirdY - 25 * faceScale
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  ctx.strokeStyle = '#4ECDC4'
+  ctx.lineWidth = 1.5 * faceScale
+  drawRoundRect(ctx, thirdLabelX - 35 * faceScale, thirdLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#4ECDC4'
+  ctx.font = `bold ${fontSize}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('中庭', thirdLabelX, thirdLabelY - 8 * faceScale)
+
+  ctx.font = `${valueFontSize}px Arial`
+  ctx.fillStyle = '#666'
+  ctx.fillText(`${measurements.thirdMiddle.toFixed(1)} px`, thirdLabelX, thirdLabelY + 10 * faceScale)
+
+  // 脸宽标注（右侧竖线）
   ctx.strokeStyle = '#EC4899'
   ctx.lineWidth = lineWidth
   ctx.globalAlpha = 0.7
   ctx.setLineDash([5, 5])
-  const widthY = foreheadY - 40 * faceScale
+  const widthY = rightX + 30 * faceScale
   ctx.beginPath()
-  ctx.moveTo(leftX, widthY)
-  ctx.lineTo(rightX, widthY)
+  ctx.moveTo(rightX, foreheadY)
+  ctx.lineTo(rightX, chinY)
   ctx.stroke()
 
   // 脸宽箭头标记
   ctx.setLineDash([])
   ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftX - arrowSize/2, widthY, leftX + arrowSize/2, widthY, '#EC4899', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, widthY, rightX - arrowSize/2, widthY, '#EC4899', arrowSize)
+  drawArrow(ctx, rightX - arrowSize/2, foreheadY, rightX + arrowSize/2, foreheadY, '#EC4899', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, chinY, rightX - arrowSize/2, chinY, '#EC4899', arrowSize)
 
   // 脸宽标签
-  const widthLabelX = (leftX + rightX) / 2
-  const widthLabelY = widthY - 30 * faceScale
+  const widthLabelX = rightX + 25 * faceScale
+  const widthLabelY = (foreheadY + chinY) / 2
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
   ctx.strokeStyle = '#EC4899'
   ctx.lineWidth = 1.5 * faceScale
@@ -523,9 +562,8 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
   ]
 
   regions.forEach((region, index) => {
-    // 根据位置切换标签位置（左右交替，避免重叠）
-    const isLeft = index % 2 === 0
-    const labelX = isLeft ? x1 - 85 * faceScale : x2 + 30 * faceScale
+    // 所有标签都在左侧对齐，固定X位置，Y根据区域调整
+    const labelX = x1 - 85 * faceScale
     const labelY = region.y
 
     // 绘制带圆角的标签背景
@@ -546,8 +584,8 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
     ctx.globalAlpha = 0.5
     ctx.setLineDash([3, 3])
     ctx.beginPath()
-    ctx.moveTo(isLeft ? labelX + labelBoxWidth / 2 : labelX - labelBoxWidth / 2, labelY)
-    ctx.lineTo(isLeft ? x1 - 10 : x2 + 10, labelY)
+    ctx.moveTo(labelX + labelBoxWidth / 2, labelY)
+    ctx.lineTo(x1 - 10, labelY)
     ctx.stroke()
     ctx.setLineDash([])
     ctx.globalAlpha = 1.0
@@ -658,7 +696,7 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
 
   regions.forEach(region => {
     const labelX = region.x
-    const labelY = foreheadY - 35 * faceScale
+    const labelY = foreheadY - 15 * faceScale  // 下移：从 -35 改成 -15
 
     // 防止超出边界
     const canvasWidth = ctx.canvas.width
