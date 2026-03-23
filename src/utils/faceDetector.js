@@ -522,13 +522,28 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.fillText(`${measurements.templeWidth.toFixed(1)} px`, templeLabelX, templeLabelY + 10 * faceScale)
 
   // ===== 颧骨宽度标注 =====
-  // 注：颧骨宽度与脸宽相同，共享脸宽的线条，这里只标注
-  // 颧骨最宽处在眼睛下方和鼻子之间，取眼睛下方点的Y坐标
+  // 颧骨最宽处在眼睛下方和鼻子之间的下半部分
   const eyeBottom = landmarks[145]  // 左眼下方
-  const eyeBottomY = eyeBottom ? eyeBottom.y * scale.y : (eyeTopY + noseTipY) / 2
-  const cheekboneLineY = eyeBottomY
+  const eyeBottomY = eyeBottom ? eyeBottom.y * scale.y : eyeTopY + 30 * faceScale
+  const cheekboneLineY = eyeBottomY + 20 * faceScale  // 在眼睛下方再往下20个单位
 
-  // 颧骨宽度标签（无需绘制线条，共享脸宽线条）
+  // 绘制颧骨宽度线条
+  ctx.strokeStyle = '#06B6D4'
+  ctx.lineWidth = lineWidth
+  ctx.globalAlpha = 0.7
+  ctx.setLineDash([6, 5])
+  ctx.beginPath()
+  ctx.moveTo(leftX, cheekboneLineY)
+  ctx.lineTo(rightX, cheekboneLineY)
+  ctx.stroke()
+
+  // 颧骨宽度箭头标记
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
+  drawArrow(ctx, leftX - arrowSize/2, cheekboneLineY, leftX + arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
+  drawArrow(ctx, rightX + arrowSize/2, cheekboneLineY, rightX - arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
+
+  // 颧骨宽度标签
   const cheekboneLabelX = (leftX + rightX) / 2
   const cheekboneLabelY = cheekboneLineY - 40 * faceScale  // 标签在颧骨线上方
   ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
