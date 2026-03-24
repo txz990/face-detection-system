@@ -340,6 +340,7 @@ function drawLandmarks(ctx, landmarks, width, height, measurementMode = 'all') {
 
 /**
  * 绘制脸部尺寸（脸高、中庭、脸宽及其他宽度参数）
+ * 颞部宽、颧骨宽、下颌宽放在右边竖向排列
  */
 function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const forehead = landmarks[10]      // 额头中心
@@ -409,197 +410,117 @@ function drawFaceDimensions(ctx, landmarks, scale, measurements, faceScale) {
   const arrowSize = 15 * faceScale
   const fontSize = Math.round(12 * faceScale)
   const valueFontSize = Math.round(11 * faceScale)
+  const labelWidth = 80 * faceScale
+  const labelHeight = 40 * faceScale
+  const labelRadius = 4 * faceScale
+  const labelBoxWidth = 90 * faceScale
+  const labelBoxHeight = 44 * faceScale
 
-  // ===== 脸高标注（左侧竖线） =====
-  ctx.strokeStyle = '#8B5CF6'
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-  const heightX = leftX - 30 * faceScale
-  ctx.beginPath()
-  ctx.moveTo(heightX, foreheadY)
-  ctx.lineTo(heightX, chinY_val)
-  ctx.stroke()
+  // 获取画布尺寸用于边界检查
+  const canvasWidth = ctx.canvas.width
+  const canvasHeight = ctx.canvas.height
 
-  // 脸高箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, heightX, foreheadY - arrowSize/2, heightX, foreheadY + arrowSize/2, '#8B5CF6', arrowSize)
-  drawArrow(ctx, heightX, chinY_val + arrowSize/2, heightX, chinY_val - arrowSize/2, '#8B5CF6', arrowSize)
-
-  // 脸高标签（与脸宽标签对齐）
-  const heightLabelX = heightX - 25 * faceScale
-  const heightLabelY = foreheadY - 75 * faceScale  // 与脸宽标签Y位置对齐
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#8B5CF6'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, heightLabelX - 35 * faceScale, heightLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#8B5CF6'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('脸高', heightLabelX, heightLabelY - 8 * faceScale)
-
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.faceHeight.toFixed(1)} px`, heightLabelX, heightLabelY + 10 * faceScale)
-
-  // ===== 脸宽标注（上方，在五眼标签上方） =====
-  ctx.strokeStyle = '#EC4899'
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-  const widthY = foreheadY - 50 * faceScale  // 上移：在五眼标签上方
-  ctx.beginPath()
-  ctx.moveTo(leftX, widthY)
-  ctx.lineTo(rightX, widthY)
-  ctx.stroke()
-
-  // 脸宽箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftX - arrowSize/2, widthY, leftX + arrowSize/2, widthY, '#EC4899', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, widthY, rightX - arrowSize/2, widthY, '#EC4899', arrowSize)
-
-  // 脸宽标签
-  const widthLabelX = (leftX + rightX) / 2
-  const widthLabelY = widthY - 25 * faceScale
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#EC4899'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, widthLabelX - 35 * faceScale, widthLabelY - 20 * faceScale, 70 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#EC4899'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('脸宽', widthLabelX, widthLabelY - 8 * faceScale)
-
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.faceWidth.toFixed(1)} px`, widthLabelX, widthLabelY + 10 * faceScale)
-
-  // ===== 颞部宽度标注 =====
-  ctx.strokeStyle = '#F97316'
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-  const templeLineY = templeY
-  ctx.beginPath()
-  ctx.moveTo(leftTempleX, templeLineY)
-  ctx.lineTo(rightTempleX, templeLineY)
-  ctx.stroke()
-
-  // 颞部宽度箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftTempleX - arrowSize/2, templeLineY, leftTempleX + arrowSize/2, templeLineY, '#F97316', arrowSize)
-  drawArrow(ctx, rightTempleX + arrowSize/2, templeLineY, rightTempleX - arrowSize/2, templeLineY, '#F97316', arrowSize)
-
-  // 颞部宽度标签
-  const templeLabelX = (leftTempleX + rightTempleX) / 2
-  const templeLabelY = templeLineY - 25 * faceScale
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#F97316'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, templeLabelX - 40 * faceScale, templeLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#F97316'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('颞部宽', templeLabelX, templeLabelY - 8 * faceScale)
-
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.templeWidth.toFixed(1)} px`, templeLabelX, templeLabelY + 10 * faceScale)
-
-  // ===== 颧骨宽度标注 =====
-  // 颧骨最宽处在眼睛下方和鼻子之间的下半部分
+  // ===== 右侧宽度标注（颞部宽、颧骨宽、下颌宽）- 竖向排列 =====
   const eyeBottom = landmarks[145]  // 左眼下方
   const eyeBottomY = eyeBottom ? eyeBottom.y * scale.y : eyeTopY + 30 * faceScale
-  const cheekboneLineY = eyeBottomY + 20 * faceScale  // 在眼睛下方再往下20个单位
+  const cheekboneLineY = eyeBottomY + 20 * faceScale
 
-  // 绘制颧骨宽度线条
-  ctx.strokeStyle = '#06B6D4'
+  // 绘制三条水平线（颞部、颧骨、下颌）
   ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.7
   ctx.setLineDash([6, 5])
-  ctx.beginPath()
-  ctx.moveTo(leftX, cheekboneLineY)
-  ctx.lineTo(rightX, cheekboneLineY)
-  ctx.stroke()
 
-  // 颧骨宽度箭头标记
-  ctx.setLineDash([])
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftX - arrowSize/2, cheekboneLineY, leftX + arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
-  drawArrow(ctx, rightX + arrowSize/2, cheekboneLineY, rightX - arrowSize/2, cheekboneLineY, '#06B6D4', arrowSize)
-
-  // 颧骨宽度标签
-  const cheekboneLabelX = (leftX + rightX) / 2
-  const cheekboneLabelY = cheekboneLineY - 40 * faceScale  // 标签在颧骨线上方
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  ctx.strokeStyle = '#06B6D4'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, cheekboneLabelX - 40 * faceScale, cheekboneLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#06B6D4'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('颧骨宽', cheekboneLabelX, cheekboneLabelY - 8 * faceScale)
-
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.cheekboneWidth.toFixed(1)} px`, cheekboneLabelX, cheekboneLabelY + 10 * faceScale)
-
-  // ===== 下颌宽度标注（在下嘴唇附近） =====
-  ctx.strokeStyle = '#FF6347'
-  ctx.lineWidth = lineWidth
+  // 颞部宽度线
+  ctx.strokeStyle = '#F97316'
   ctx.globalAlpha = 0.7
-  ctx.setLineDash([5, 5])
-
-  // 在下嘴唇高度绘制横线（从左下颌到右下颌，自动匹配脸型大小）
   ctx.beginPath()
-  ctx.moveTo(leftJawX, jawY)
-  ctx.lineTo(rightJawX, jawY)
+  ctx.moveTo(Math.max(0, leftTempleX), templeY)
+  ctx.lineTo(Math.min(canvasWidth, rightTempleX), templeY)
   ctx.stroke()
-  ctx.setLineDash([])
 
-  // 下颌宽度箭头标记
-  ctx.globalAlpha = 1.0
-  drawArrow(ctx, leftJawX - arrowSize/2, jawY, leftJawX + arrowSize/2, jawY, '#FF6347', arrowSize)
-  drawArrow(ctx, rightJawX + arrowSize/2, jawY, rightJawX - arrowSize/2, jawY, '#FF6347', arrowSize)
+  // 颧骨宽度线
+  ctx.strokeStyle = '#06B6D4'
+  ctx.beginPath()
+  ctx.moveTo(Math.max(0, leftX), cheekboneLineY)
+  ctx.lineTo(Math.min(canvasWidth, rightX), cheekboneLineY)
+  ctx.stroke()
 
-  // 下颌宽度标签
-  const jawLabelX = (leftJawX + rightJawX) / 2
-  const jawLabelY = jawY + 30 * faceScale
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+  // 下颌宽度线
   ctx.strokeStyle = '#FF6347'
-  ctx.lineWidth = 1.5 * faceScale
-  drawRoundRect(ctx, jawLabelX - 40 * faceScale, jawLabelY - 20 * faceScale, 80 * faceScale, 40 * faceScale, 4 * faceScale)
-  ctx.fill()
+  ctx.beginPath()
+  ctx.moveTo(Math.max(0, leftJawX), jawY)
+  ctx.lineTo(Math.min(canvasWidth, rightJawX), jawY)
   ctx.stroke()
 
-  ctx.fillStyle = '#FF6347'
-  ctx.font = `bold ${fontSize}px Arial`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('下颌宽', jawLabelX, jawLabelY - 8 * faceScale)
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1.0
 
-  ctx.font = `${valueFontSize}px Arial`
-  ctx.fillStyle = '#666'
-  ctx.fillText(`${measurements.jawWidth.toFixed(1)} px`, jawLabelX, jawLabelY + 10 * faceScale)
+  // 右侧标签（颞部、颧骨、下颌 - 竖向排列）
+  const rightLabelRegions = [
+    {
+      name: '颞部宽',
+      value: measurements.templeWidth,
+      color: '#F97316',
+      y: templeY
+    },
+    {
+      name: '颧骨宽',
+      value: measurements.cheekboneWidth,
+      color: '#06B6D4',
+      y: cheekboneLineY
+    },
+    {
+      name: '下颌宽',
+      value: measurements.jawWidth,
+      color: '#FF6347',
+      y: jawY
+    }
+  ]
+
+  rightLabelRegions.forEach(region => {
+    // 标签放在右边
+    let labelX = rightX + 85 * faceScale
+    let labelY = region.y
+
+    // 边界检查
+    const boxX = labelX - labelBoxWidth / 2
+    const boxY = labelY - labelBoxHeight / 2
+
+    if (boxX < 5) labelX = labelBoxWidth / 2 + 5
+    if (boxX + labelBoxWidth > canvasWidth - 5) labelX = canvasWidth - labelBoxWidth / 2 - 5
+    if (boxY < 5) labelY = labelBoxHeight / 2 + 5
+    if (boxY + labelBoxHeight > canvasHeight - 5) labelY = canvasHeight - labelBoxHeight / 2 - 5
+
+    // 绘制标签背景
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = 1.5 * faceScale
+    drawRoundRect(ctx, labelX - labelBoxWidth / 2, labelY - labelBoxHeight / 2, labelBoxWidth, labelBoxHeight, labelRadius)
+    ctx.fill()
+    ctx.stroke()
+
+    // 绘制指向线
+    ctx.strokeStyle = region.color
+    ctx.lineWidth = 1.5 * faceScale
+    ctx.globalAlpha = 0.5
+    ctx.setLineDash([3, 3])
+    ctx.beginPath()
+    ctx.moveTo(labelX - labelBoxWidth / 2, labelY)
+    ctx.lineTo(rightX + 10, labelY)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1.0
+
+    // 绘制文字
+    ctx.fillStyle = region.color
+    ctx.font = `bold ${fontSize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(region.name, labelX, labelY - 4 * faceScale)
+
+    ctx.font = `${valueFontSize}px Arial`
+    ctx.fillStyle = '#666'
+    ctx.fillText(`${region.value.toFixed(1)} px`, labelX, labelY + 12 * faceScale)
+  })
 }
 
 /**
@@ -701,18 +622,34 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
 
   regions.forEach((region, index) => {
     // 所有标签都在左侧对齐，固定X位置，Y根据区域调整
-    const labelX = x1 - 85 * faceScale
+    let labelX = x1 - 85 * faceScale
     const labelY = region.y
+
+    // 边界检查：防止标签超出画布
+    const canvasWidth = ctx.canvas.width
+    const canvasHeight = ctx.canvas.height
+    const boxX = labelX - labelBoxWidth / 2
+    const boxY = labelY - labelBoxHeight / 2
+
+    // 检查左边界
+    if (boxX < 5) labelX = labelBoxWidth / 2 + 5
+    // 检查右边界
+    if (boxX + labelBoxWidth > canvasWidth - 5) labelX = canvasWidth - labelBoxWidth / 2 - 5
+    // 检查上边界
+    let adjustedLabelY = labelY
+    if (boxY < 5) adjustedLabelY = labelBoxHeight / 2 + 5
+    // 检查下边界
+    if (boxY + labelBoxHeight > canvasHeight - 5) adjustedLabelY = canvasHeight - labelBoxHeight / 2 - 5
 
     // 绘制带圆角的标签背景
     ctx.fillStyle = 'rgba(255, 255, 255, 0.98)'
     ctx.strokeStyle = region.color
     ctx.lineWidth = lineWidth
 
-    const boxX = labelX - labelBoxWidth / 2
-    const boxY = labelY - labelBoxHeight / 2
+    const finalBoxX = labelX - labelBoxWidth / 2
+    const finalBoxY = adjustedLabelY - labelBoxHeight / 2
 
-    drawRoundRect(ctx, boxX, boxY, labelBoxWidth, labelBoxHeight, boxRadius)
+    drawRoundRect(ctx, finalBoxX, finalBoxY, labelBoxWidth, labelBoxHeight, boxRadius)
     ctx.fill()
     ctx.stroke()
 
@@ -722,8 +659,8 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
     ctx.globalAlpha = 0.5
     ctx.setLineDash([3, 3])
     ctx.beginPath()
-    ctx.moveTo(labelX + labelBoxWidth / 2, labelY)
-    ctx.lineTo(x1 - 10, labelY)
+    ctx.moveTo(labelX + labelBoxWidth / 2, adjustedLabelY)
+    ctx.lineTo(x1 - 10, adjustedLabelY)
     ctx.stroke()
     ctx.setLineDash([])
     ctx.globalAlpha = 1.0
@@ -732,12 +669,12 @@ function drawThirdRegions(ctx, landmarks, scale, measurements, faceScale) {
     ctx.fillStyle = region.color
     ctx.font = `bold ${fontSize}px Arial`
     ctx.textAlign = 'center'
-    ctx.fillText(region.name, labelX, labelY - 4 * faceScale)
+    ctx.fillText(region.name, labelX, adjustedLabelY - 4 * faceScale)
 
     // 绘制数值
     ctx.font = `${valueFontSize}px Arial`
     ctx.fillStyle = '#666'
-    ctx.fillText(`${region.value.toFixed(1)} px`, labelX, labelY + 12 * faceScale)
+    ctx.fillText(`${region.value.toFixed(1)} px`, labelX, adjustedLabelY + 12 * faceScale)
   })
 }
 
@@ -764,6 +701,9 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
   const x4 = rightEyeRight.x * scale.x
   const x5 = faceRight.x * scale.x
   const eyeY = leftEyeLeft.y * scale.y
+
+  const canvasWidth = ctx.canvas.width
+  const canvasHeight = ctx.canvas.height
 
   // 根据人脸比例调整线条
   const lineWidth = 2.5 * faceScale
@@ -792,7 +732,7 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
   ctx.setLineDash([])
   ctx.globalAlpha = 1.0
 
-  // 绘制五个眼睛宽度区域的标签
+  // 五眼标签配置
   const regions = [
     {
       name: '左空白',
@@ -826,26 +766,59 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
     }
   ]
 
-  const fontSize = Math.round(14 * faceScale)
-  const valueFontSize = Math.round(12 * faceScale)
-  const labelBoxWidth = 110 * faceScale
-  const labelBoxHeight = 44 * faceScale
-  const boxRadius = 6 * faceScale
+  // 计算五眼区域的总宽度
+  const faceWidth = x5 - x0
 
-  regions.forEach(region => {
-    const labelX = region.x
-    const labelY = foreheadY - 15 * faceScale  // 下移：从 -35 改成 -15
+  // 动态计算标签尺寸，基于可用空间
+  // 需要5个标签，间距10px，总宽度 = 5*labelWidth + 4*10px + 左右边距
+  const availableWidth = faceWidth - 40 * faceScale  // 留出左右边距
+  const totalSpacing = 4 * 10 * faceScale  // 4个间隔
+
+  // 计算每个标签最多能占用的宽度
+  let labelBoxWidth = (availableWidth - totalSpacing) / 5
+  let fontSize = Math.round(12 * faceScale)
+  let valueFontSize = Math.round(10 * faceScale)
+  let labelBoxHeight = 40 * faceScale
+
+  // 如果标签宽度太小，按最小宽度计算，并采用上下错开排列
+  const minLabelWidth = 60 * faceScale
+  let useAlternateLayout = false
+
+  if (labelBoxWidth < minLabelWidth) {
+    labelBoxWidth = minLabelWidth
+    useAlternateLayout = true  // 启用上下交替排列
+    fontSize = Math.round(10 * faceScale)
+    valueFontSize = Math.round(9 * faceScale)
+  }
+
+  const boxRadius = 4 * faceScale
+
+  regions.forEach((region, index) => {
+    let labelX = region.x
+    let labelY = foreheadY - 15 * faceScale
+
+    // 使用上下交替排列，避免重叠
+    if (useAlternateLayout) {
+      if (index % 2 === 0) {
+        labelY = foreheadY - 40 * faceScale  // 奇数行（0,2,4）放上面
+      } else {
+        labelY = foreheadY + 15 * faceScale  // 偶数行（1,3）放下面
+      }
+    }
 
     // 防止超出边界
-    const canvasWidth = ctx.canvas.width
-    let finalX = Math.max(60 * faceScale, Math.min(labelX, canvasWidth - 60 * faceScale))
+    const halfWidth = labelBoxWidth / 2
+    if (labelX - halfWidth < 5) labelX = halfWidth + 5
+    if (labelX + halfWidth > canvasWidth - 5) labelX = canvasWidth - halfWidth - 5
+    if (labelY - labelBoxHeight / 2 < 5) labelY = labelBoxHeight / 2 + 5
+    if (labelY + labelBoxHeight / 2 > canvasHeight - 5) labelY = canvasHeight - labelBoxHeight / 2 - 5
 
-    // 绘制带圆角的标签背景
+    // 绘制标签背景
     ctx.fillStyle = 'rgba(255, 255, 255, 0.98)'
     ctx.strokeStyle = region.color
     ctx.lineWidth = lineWidth
 
-    const boxX = finalX - labelBoxWidth / 2
+    const boxX = labelX - labelBoxWidth / 2
     const boxY = labelY - labelBoxHeight / 2
 
     drawRoundRect(ctx, boxX, boxY, labelBoxWidth, labelBoxHeight, boxRadius)
@@ -858,8 +831,19 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
     ctx.globalAlpha = 0.4
     ctx.setLineDash([3, 3])
     ctx.beginPath()
-    ctx.moveTo(finalX, labelY + labelBoxHeight / 2)
-    ctx.lineTo(finalX, foreheadY + 30 * faceScale)
+    if (useAlternateLayout) {
+      // 根据标签位置调整指向线
+      if (index % 2 === 0) {
+        ctx.moveTo(labelX, labelY + labelBoxHeight / 2)
+        ctx.lineTo(labelX, foreheadY - 5 * faceScale)
+      } else {
+        ctx.moveTo(labelX, labelY - labelBoxHeight / 2)
+        ctx.lineTo(labelX, foreheadY + 5 * faceScale)
+      }
+    } else {
+      ctx.moveTo(labelX, labelY + labelBoxHeight / 2)
+      ctx.lineTo(labelX, foreheadY + 30 * faceScale)
+    }
     ctx.stroke()
     ctx.setLineDash([])
     ctx.globalAlpha = 1.0
@@ -868,12 +852,13 @@ function drawFiveEyesRegions(ctx, landmarks, scale, measurements, faceScale) {
     ctx.fillStyle = region.color
     ctx.font = `bold ${fontSize}px Arial`
     ctx.textAlign = 'center'
-    ctx.fillText(region.name, finalX, labelY - 4 * faceScale)
+    ctx.textBaseline = 'middle'
+    ctx.fillText(region.name, labelX, labelY - 5 * faceScale)
 
     // 绘制数值
     ctx.font = `${valueFontSize}px Arial`
     ctx.fillStyle = '#666'
-    ctx.fillText(`${region.value.toFixed(1)} px`, finalX, labelY + 12 * faceScale)
+    ctx.fillText(`${region.value.toFixed(1)} px`, labelX, labelY + 10 * faceScale)
   })
 }
 

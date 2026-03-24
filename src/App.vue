@@ -484,14 +484,65 @@ const saveImage = () => {
     return
   }
 
-  const link = document.createElement('a')
-  link.href = resultImage.value
+  // 检测是否是iOS设备
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
-  link.download = `face-detection-${timestamp}.png`
+  const filename = `face-detection-${timestamp}.png`
+
+  if (isIOS) {
+    // iOS适配：在新窗口打开图片，用户可长按保存到相册
+    // 或使用blob方式下载
+    saveImageForIOS(resultImage.value, filename)
+  } else {
+    // 其他设备：使用标准下载方式
+    saveImageForOthers(resultImage.value, filename)
+  }
+}
+
+const saveImageForOthers = (imageDataUrl, filename) => {
+  const link = document.createElement('a')
+  link.href = imageDataUrl
+  link.download = filename
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
 }
+
+const saveImageForIOS = async (imageDataUrl, filename) => {
+  try {
+    // 方案1：转换为blob并尝试下载
+    const response = await fetch(imageDataUrl)
+    const blob = await response.blob()
+
+    // 创建可下载的blob URL
+    const blobUrl = URL.createObjectURL(blob)
+
+    // 方案：直接在当前窗口打开（iOS用户可长按保存）
+    // 如果要下载，使用a标签
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = filename
+
+    // 尝试触发下载
+    document.body.appendChild(link)
+    link.click()
+
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    }, 200)
+  } catch (error) {
+    console.error('iOS保存失败:', error)
+    // 降级方案：使用window.open打开图片URL
+    // 用户可以长按图片保存到相册
+    const newWindow = window.open(imageDataUrl, '_blank')
+    if (!newWindow) {
+      alert('请允许弹出窗口以保存图片。如失败，请长按图片手动保存到相册。')
+    }
+  }
+}
+
 
 const detectFace = async () => {
   if (!imageFile.value) return
